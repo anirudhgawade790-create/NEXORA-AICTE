@@ -1,6 +1,6 @@
 """Application configuration loaded from environment / .env via pydantic-settings."""
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +9,14 @@ class Settings(BaseSettings):
 
     # Database (SQLite for the prototype; override for Postgres/Supabase).
     DATABASE_URL: str = "sqlite:///./nexora.db"
+
+    # Optional, documented Open Government Data API source. No source is
+    # assumed until an AICTE dataset resource ID and API key are configured.
+    AICTE_OGD_API_KEY: str = ""
+    AICTE_OGD_RESOURCE_ID: str = ""
+    AICTE_DATASET_PAGE_URL: str = ""
+    AICTE_OGD_PUBLISHER_VERIFIED: bool = False
+    AICTE_SYNC_INTERVAL_MINUTES: int = Field(default=360, ge=5, le=1440)
 
     # JWT signing material must be supplied outside source control.
     JWT_SECRET: str = ""

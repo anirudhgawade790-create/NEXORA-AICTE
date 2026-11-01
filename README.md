@@ -47,13 +47,15 @@ The interface has been redesigned as a polished enterprise SaaS experience with 
 ### Workspace and analytics
 
 - Role-aware navigation, collapsible desktop sidebar, mobile drawer, breadcrumbs, global application search, profile menu and notification count.
-- Executive dashboard with live application KPIs, status and regional charts, monthly trends, workflow stages, compliance progress, upcoming deadlines and recent applications.
+- NEXORA prototype dashboard with application KPIs, status and regional charts, monthly trends, workflow stages, compliance progress, and a priority queue for overdue and upcoming work.
+- Separate Live AICTE Data Dashboard for public institution/approval data; it never merges official public data with prototype application records.
 - Application search, filters, sorting, pagination and CSV export.
 - Reports for application pendency, regional performance, EVC appointments, compliance, document validity, overdue actions and decisions.
+- AICTE public institution dashboard with source attribution, synchronization status and last-successful-sync time.
 
 ### Application and operations
 
-- Institution application submission and application detail pages.
+- Institution application submission with a readiness checklist, plus application evidence-review progress and an application-linked upload shortcut.
 - Configurable workflow transitions, stage history, scrutiny observations, remarks and record-level access checks.
 - Document upload and review, private authenticated downloads, verification status, expiry information and optional advisory OCR.
 - Compliance undertakings, evidence submission, deadlines, verification and deficiency remarks.
@@ -66,7 +68,7 @@ The interface has been redesigned as a polished enterprise SaaS experience with 
 - User and role administration, regional assignment, activation/deactivation and institution association.
 - Configurable example workflow rules, reminder windows, escalation settings and document categories.
 - Administrator-triggered deadline monitor and a clearly labelled demo-data reset.
-- Help page with role descriptions, safeguards and guided demo scenarios.
+- Role-aware guided demo scenarios, role descriptions and safeguards.
 - Premium split-screen sign-in and institution access-request screens.
 
 ### Visual design and usability
@@ -120,7 +122,9 @@ The stage names, deadlines, reminder intervals and escalation settings are proto
 
 ## Demo accounts and scenarios
 
-All five fictional seed accounts use the shared demo password:
+The synthetic seed portfolio contains 25 applications across all five regions, with stage histories, varied outcomes and deadlines, EVC visits, review observations, document-validity states and compliance records. Institution names and workflow records are fictional demo data, not official AICTE records.
+
+All seed accounts use the shared demo password:
 
 ```text
 demo1234
@@ -130,6 +134,10 @@ demo1234
 |---|---|---|
 | Administrator | `admin@nexora-demo.in` | Workspace administration |
 | Regional Officer | `regional@nexora-demo.in` | South region |
+| Regional Officer | `north.regional@nexora-demo.in` | North region |
+| Regional Officer | `east.regional@nexora-demo.in` | East region |
+| Regional Officer | `west.regional@nexora-demo.in` | West region |
+| Regional Officer | `central.regional@nexora-demo.in` | Central region |
 | Bureau Officer | `bureau@nexora-demo.in` | Workflow and bureau operations |
 | EVC / Committee | `evc@nexora-demo.in` | EVC queue |
 | Institution | `institution@nexora-demo.in` | Verma Institute of Technology, South |
@@ -145,7 +153,7 @@ These are local prototype credentials only. Do not reuse the shared demo passwor
 5. **Review a lease renewal:** Sign in as Institution → Lease Management → open an expired lease and submit renewal evidence where available.
 6. **Run an overdue check:** Sign in as Administrator → User Management → Run deadline monitor. Review resulting notifications and overdue records.
 
-> **Destructive action:** “Reset demo data” replaces local application records and users with the fictional seed data. Use it only when you are comfortable losing the current local demo records.
+> “Reset demo data” replaces local application records and users with the fictional seed data. Use it only when you are comfortable losing the current local demo records.
 
 ## Run locally
 
@@ -200,16 +208,33 @@ Copy the example files before local development:
 
 | Setting | Purpose |
 |---|---|
-| `DATABASE_URL` | SQLAlchemy database connection. Defaults to local SQLite. |
+| `DATABASE_URL` | SQLAlchemy database connection. Defaults to local SQLite; configure PostgreSQL for shared/production caching (for example `postgresql+psycopg://user:password@host:5432/nexora`). |
 | `JWT_SECRET` | Required private signing secret. The backend refuses to start if it is missing or does not meet the minimum-strength checks. |
 | `JWT_ALG` | JWT signing algorithm; defaults to `HS256`. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access-token lifetime; defaults to 480 minutes. |
 | `CORS_ORIGINS` | Comma-separated allowed browser origins for the API. |
 | `APP_ENV` | Set to `production` to disable interactive API documentation. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Optional email delivery configuration. Without SMTP, notifications remain in-app. |
+| `AICTE_OGD_API_KEY` | Server-only API key issued by the Open Government Data platform for an authorized public dataset. |
+| `AICTE_OGD_RESOURCE_ID` | UUID resource ID for an AICTE dataset whose publisher and access terms have been verified. |
+| `AICTE_DATASET_PAGE_URL` | Official dataset information page shown as the source in the dashboard. |
+| `AICTE_OGD_PUBLISHER_VERIFIED` | Must be `true` only after verifying the publisher is AICTE and API access is authorized. |
+| `AICTE_SYNC_INTERVAL_MINUTES` | Automatic public-data sync interval (5–1440 minutes; defaults to 360). |
 | `VITE_API_BASE` | Optional API URL override. Defaults to same-origin `/api`; use an absolute URL only when hosting the API separately. |
 
 The local database and uploaded files are created under `backend/`. Local `.env` files, databases, uploads, virtual environments and frontend build output are excluded from Git.
+
+### Public AICTE data integration
+
+The `/aicte-data` screen is a dedicated public-data view. It reads only from the backend's public institution cache and displays source attribution, API availability, and last successful synchronization. The backend adapter uses the documented Open Government Data API resource endpoint; it does not call private AICTE portal endpoints, scrape dashboard pages, or infer internal application status.
+
+No verified AICTE dataset resource ID or public API contract was available during this integration. Therefore the source stays **not configured** by default and the live dashboard intentionally contains no institution rows until a dataset is verified and configured. Obtain the API key and resource ID through the official dataset/API process, then set the server-side variables in `backend/.env`; never put the key in frontend code. The dataset page URL must be an official HTTPS page, and the publisher/access confirmation must be explicitly enabled. The scheduled job syncs immediately on startup and then at the configured interval; an administrator can also request a manual sync.
+
+The cache uses the configured SQLAlchemy database. For shared or production deployments, configure PostgreSQL using the included `psycopg` driver. Local SQLite remains a development-only default. Do not treat cached records as live: the dashboard always shows the last successful synchronization time, and failed syncs preserve the prior cache while marking the source as degraded/unavailable.
+
+AICTE ONOD/Approved Institutions Dashboard access did not provide a documented public API contract during implementation. No undocumented endpoint or authenticated portal data is used. Application tracking, pending stages, EVC schedules, compliance/undertakings and document expiry remain local NEXORA prototype records until AICTE authorizes a data-sharing API for them.
+
+The Approval Process Handbook 2024–2027 is a published policy reference, not a live API. NEXORA's configurable example workflow and reminder rules have not been treated as handbook-derived official rules; do not use them as official compliance requirements.
 
 ## Project structure
 
@@ -238,6 +263,7 @@ frontend/
 |---|---|
 | `/login`, `/register` | Sign-in and institution access request |
 | `/dashboard` | Executive KPIs, charts, deadlines and recent applications |
+| `/aicte-data` | Public AICTE institution records, source health and sync freshness |
 | `/applications`, `/applications/new`, `/applications/:id` | Search, submit and manage application records |
 | `/documents` | Document upload, status and review |
 | `/compliance` | Undertakings, deadlines and submitted evidence |

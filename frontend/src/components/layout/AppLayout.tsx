@@ -1,15 +1,19 @@
 import {
   Activity, Bell, BookOpen, Building2, ChevronDown, ChevronLeft, ChevronRight,
-  ClipboardList, Command, FileBarChart2, FileCheck2, Gauge, HelpCircle,
-  Landmark, LogOut, Menu, Search, Settings2, ShieldCheck, Users, X,
+  ClipboardList, Command, FileBarChart2, FileCheck2, Gauge, HelpCircle, Globe2,
+  Landmark, LogOut, Menu, Moon, Search, Settings2, ShieldCheck, Sun, Users, X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { apiGet } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { useTheme } from '../../theme/ThemeContext';
 
 const groups = [
-  { label: 'OVERVIEW', links: [{ to: '/dashboard', label: 'Dashboard', icon: Gauge, roles: null }] },
+  { label: 'OVERVIEW', links: [
+    { to: '/dashboard', label: 'Dashboard', icon: Gauge, roles: null },
+    { to: '/aicte-data', label: 'AICTE public data', icon: Globe2, roles: null },
+  ] },
   { label: 'APPLICATION MANAGEMENT', links: [
     { to: '/applications', label: 'All applications', icon: ClipboardList, roles: null },
     { to: '/applications/new', label: 'New application', icon: Building2, roles: ['institution'] },
@@ -45,6 +49,7 @@ export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const profileRef = useRef<HTMLDivElement>(null);
@@ -160,6 +165,16 @@ export default function AppLayout() {
               <input ref={searchRef} aria-label="Search applications" placeholder="Search applications..." value={search} onChange={(event) => setSearch(event.target.value)} className="h-9 w-56 rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-12 text-xs outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100" />
               <span className="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] text-slate-400"><Command size={10} className="inline" /> K</span>
             </form>
+            <button
+              type="button"
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              aria-pressed={theme === 'dark'}
+              title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              onClick={toggleTheme}
+              className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-brand-navy"
+            >
+              {theme === 'dark' ? <Sun size={18} strokeWidth={1.8} /> : <Moon size={18} strokeWidth={1.8} />}
+            </button>
             <Link to="/help" aria-label="Help and support" className="hidden rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-brand-navy sm:inline-flex"><BookOpen size={18} strokeWidth={1.8} /></Link>
             <Link to="/notifications" aria-label="Notifications" className="relative rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-brand-navy">
               <Bell size={18} strokeWidth={1.8} />

@@ -75,14 +75,14 @@ def dashboard(
     documents = doc_query.all()
     expired = sum(compute_document_status(item, reminder_intervals(db))[0] == "expired" for item in documents)
     kpis = [
-        {"label": "Total Applications", "value": len(applications), "change": "Live"},
-        {"label": "Pending Applications", "value": len(open_apps), "change": "Live"},
-        {"label": "Under Scrutiny", "value": sum(item.current_stage in {"initial_scrutiny", "deficiency_check"} for item in applications), "change": "Live"},
-        {"label": "Awaiting EVC", "value": awaiting_evc, "change": "Live"},
-        {"label": "Awaiting Committee Review", "value": awaiting_committee, "change": "Live"},
+        {"label": "Total Applications", "value": len(applications), "change": "NEXORA DB"},
+        {"label": "Pending Applications", "value": len(open_apps), "change": "NEXORA DB"},
+        {"label": "Under Scrutiny", "value": sum(item.current_stage in {"initial_scrutiny", "deficiency_check"} for item in applications), "change": "NEXORA DB"},
+        {"label": "Awaiting EVC", "value": awaiting_evc, "change": "NEXORA DB"},
+        {"label": "Awaiting Committee Review", "value": awaiting_committee, "change": "NEXORA DB"},
         {"label": "Compliance Due Soon", "value": due_soon.count(), "change": "Next 30 days"},
-        {"label": "Overdue Cases", "value": overdue_count, "change": "Live"},
-        {"label": "Expired Documents", "value": expired, "change": "Live"},
+        {"label": "Overdue Cases", "value": overdue_count, "change": "NEXORA DB"},
+        {"label": "Expired Documents", "value": expired, "change": "NEXORA DB"},
     ]
     status_counts = Counter(item.status for item in applications)
     region_counts = Counter(item.region for item in open_apps)
@@ -105,14 +105,30 @@ def dashboard(
         if item.status == "verified":
             comp_verified[category] += 1
     deadlines = [
-        {"id": item.id, "kind": "Application", "title": item.id, "due_date": item.deadline.isoformat()}
-        for item in open_apps if item.deadline and item.deadline >= now
+        {
+            "id": item.id, "kind": "Application", "title": item.id,
+            "due_date": item.deadline.isoformat(), "status": item.status,
+        }
+        for item in open_apps if item.deadline and item.deadline <= now + timedelta(days=30)
     ]
     deadlines += [
-        {"id": item.id, "kind": "Compliance", "title": item.description, "due_date": item.due_date.isoformat()}
-        for item in compliance_rows if item.due_date >= now
+        {
+            "id": item.id, "kind": "Compliance", "title": item.description,
+            "due_date": item.due_date.isoformat(), "status": item.status,
+        }
+        for item in compliance_rows
+        if item.status != "verified" and item.due_date <= now + timedelta(days=30)
     ]
-    deadlines.sort(key=lambda item: item["due_date"])
+    overdue = sorted(
+        (item for item in deadlines if datetime.fromisoformat(item["due_date"]) < now),
+        key=lambda item: item["due_date"],
+        reverse=True,
+    )
+    upcoming = sorted(
+        (item for item in deadlines if datetime.fromisoformat(item["due_date"]) >= now),
+        key=lambda item: item["due_date"],
+    )
+    attention_queue = (overdue[:5] + upcoming[:5])[:10]
     return {
         "kpis": kpis,
         "statusDistribution": [{"name": key, "value": value} for key, value in sorted(status_counts.items())],
@@ -123,5 +139,7 @@ def dashboard(
             {"name": key, "percent": round(comp_verified[key] * 100 / count) if count else 0}
             for key, count in sorted(comp_by_category.items())
         ],
-        "upcomingDeadlines": deadlines[:10],
+        "upcomingDeadlines": upcoming[:10],
+        "attentionQueue": attention_queue,
+        "attentionSummary": {"overdue": len(overdue), "dueSoon": len(upcoming)},
     }

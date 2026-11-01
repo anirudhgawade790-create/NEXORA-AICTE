@@ -30,7 +30,7 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    """Create all tables (prototype, no Alembic) then seed demo data if empty.
+    """Create tables and idempotently maintain the local demo seed.
 
     Imports app.models so every model is registered with Base.metadata before
     create_all runs, and imports seed lazily to avoid a circular import.
@@ -42,11 +42,15 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        if (
+        has_demo_account = db.query(User).filter_by(
+            email="admin@nexora-demo.in"
+        ).first() is not None
+        needs_initial_seed = (
             db.query(User).count() == 0
             or db.query(Application).count() == 0
             or db.query(DocumentCategory).count() == 0
-        ):
+        )
+        if needs_initial_seed or has_demo_account:
             seed_demo_data(db)
     finally:
         db.close()

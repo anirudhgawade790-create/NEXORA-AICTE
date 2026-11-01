@@ -3,10 +3,12 @@ import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import AppLayout from './components/layout/AppLayout';
+import { ThemeProvider } from './theme/ThemeContext';
 
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const LiveAICTEData = lazy(() => import('./pages/LiveAICTEData'));
 const ApplicationsList = lazy(() => import('./pages/ApplicationsList'));
 const ApplicationDetail = lazy(() => import('./pages/ApplicationDetail'));
 const NewApplication = lazy(() => import('./pages/NewApplication'));
@@ -41,6 +43,7 @@ function AppRoutes() {
       <Route path="/" element={<Protected><AppLayout /></Protected>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Page><Dashboard /></Page>} />
+        <Route path="aicte-data" element={<Page><LiveAICTEData /></Page>} />
         <Route path="applications" element={<Page><ApplicationsList /></Page>} />
         <Route path="applications/new" element={<Protected roles={['institution']}><Page><NewApplication /></Page></Protected>} />
         <Route path="applications/:id" element={<Page><ApplicationDetail /></Page>} />
@@ -61,5 +64,5 @@ function AppRoutes() {
 }
 
 export default function App() {
-  return <AuthProvider><AppRoutes /></AuthProvider>;
+  return <ThemeProvider><AuthProvider><AppRoutes /></AuthProvider></ThemeProvider>;
 }

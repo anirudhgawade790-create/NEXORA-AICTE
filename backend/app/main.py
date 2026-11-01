@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,9 +12,10 @@ from app.config import settings
 from app.database import init_db
 from app.rate_limit import limiter
 from app.routers import (
-    admin, applications, audit, auth, compliance, dashboard, documents, evc,
+    admin, aicte_data, applications, audit, auth, compliance, dashboard, documents, evc,
     lease, notifications, reports, users, workflow,
 )
+from app.services.aicte_data import scheduled_public_data_sync, source_is_configured
 from app.services.scheduler import scheduler, scheduled_monitor
 
 
@@ -23,6 +25,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if not scheduler.running:
         scheduler.add_job(scheduled_monitor, "interval", minutes=5, id="deadline-monitor",
                           replace_existing=True, max_instances=1)
+        if source_is_configured():
+            scheduler.add_job(
+                scheduled_public_data_sync,
+                "interval",
+                minutes=settings.AICTE_SYNC_INTERVAL_MINUTES,
+                id="aicte-public-data-sync",
+                replace_existing=True,
+                max_instances=1,
+                next_run_time=datetime.utcnow(),
+            )
         scheduler.start()
     yield
     if scheduler.running:
@@ -77,7 +89,7 @@ def health():
 
 
 for api_router in (
-    auth.router, users.router, admin.router, applications.router, workflow.router,
+    auth.router, users.router, admin.router, aicte_data.router, applications.router, workflow.router,
     dashboard.router, documents.router, compliance.router, lease.router, evc.router,
     notifications.router, reports.router, audit.router,
 ):

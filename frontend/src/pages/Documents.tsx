@@ -1,6 +1,7 @@
 import { AlertCircle, Download, FileCheck2, FileText, LockKeyhole, ShieldCheck, UploadCloud } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiDownload, apiGet, apiPost } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
@@ -22,9 +23,10 @@ function statusTone(value: string) {
 
 export default function Documents() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState<DocumentItem[]>([]);
   const [category, setCategory] = useState(categories[0]);
-  const [applicationId, setApplicationId] = useState('');
+  const [applicationId, setApplicationId] = useState(() => searchParams.get('application_id') || '');
   const [file, setFile] = useState<File | null>(null);
   const [remarks, setRemarks] = useState<Record<number, string>>({});
   const [error, setError] = useState('');
@@ -34,7 +36,7 @@ export default function Documents() {
   const canVerify = ['admin', 'regional_officer', 'bureau_officer'].includes(user?.role || '');
 
   async function load() {
-    try { setItems(await apiGet<DocumentItem[]>('/documents')); setError(''); }
+    try { setItems(await apiGet<DocumentItem[]>('/documents', { application_id: applicationId })); setError(''); }
     catch (err) { setError(err instanceof Error ? err.message : 'Unable to load documents'); }
     finally { setLoading(false); }
   }
@@ -52,7 +54,7 @@ export default function Documents() {
     form.append('category', category);
     if (applicationId) form.append('application_id', applicationId);
     setBusy(true);
-    try { await apiPost('/documents', form); setFile(null); setApplicationId(''); await load(); }
+    try { await apiPost('/documents', form); setFile(null); await load(); }
     catch (err) { setError(err instanceof Error ? err.message : 'Upload failed'); }
     finally { setBusy(false); }
   }

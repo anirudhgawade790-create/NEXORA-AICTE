@@ -12,6 +12,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     Text,
     func,
@@ -48,6 +49,25 @@ class Institution(Base):
     name = Column(String(255), nullable=False)
     region = Column(String(50), nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
+
+
+class AICTEInstitutionCache(Base):
+    __tablename__ = "aicte_institution_cache"
+
+    record_key = Column(String(64), primary_key=True)
+    record = Column(JSON, nullable=False)
+    synchronized_at = Column(DateTime, nullable=False)
+
+
+class AICTESyncState(Base):
+    __tablename__ = "aicte_sync_state"
+
+    id = Column(Integer, primary_key=True)
+    status = Column(String(30), nullable=False, default="not_configured")
+    last_attempt_at = Column(DateTime, nullable=True)
+    last_success_at = Column(DateTime, nullable=True)
+    last_error = Column(Text, nullable=True)
+    record_count = Column(Integer, nullable=False, default=0)
 
 
 class Application(Base):

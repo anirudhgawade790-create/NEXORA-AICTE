@@ -1,5 +1,5 @@
 import {
-  Activity, AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, CalendarClock,
+  Activity, AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, BookOpen, CalendarClock,
   CheckCircle2, Clock3, FileBarChart2, FileCheck2, Gauge, Landmark, RefreshCw,
   ShieldAlert, Sparkles, Users,
 } from 'lucide-react';
@@ -20,11 +20,14 @@ type DashboardData = {
   monthlyTrend: { month: string; applications: number }[];
   complianceCompletion: { name: string; percent: number }[];
   upcomingDeadlines: { id: number | string; kind: string; title: string; due_date: string }[];
+  attentionQueue: { id: number | string; kind: string; title: string; due_date: string; status: string }[];
+  attentionSummary?: { overdue: number; dueSoon: number };
 };
 type ApplicationRow = {
   id: string; institution: string; region: string; type: string; submittedAt: string;
   stage: string; officer: string; daysPending: number; deadline: string | null; status: string;
 };
+type ComplianceQueueItem = { id: number; description: string; due_date: string; status: string; application_id: string | null };
 
 const chartColors = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#7c3aed', '#0891b2'];
 const cardIcons = [FileBarChart2, Clock3, SearchIcon, CalendarClock, ShieldAlert, FileCheck2, AlertTriangle, CheckCircle2];
@@ -45,6 +48,14 @@ function statusTone(value: string) {
   if (['rejected', 'overdue', 'expired'].includes(value.toLowerCase())) return 'bg-rose-50 text-rose-700';
   if (['returned', 'deficient'].includes(value.toLowerCase())) return 'bg-amber-50 text-amber-700';
   return 'bg-blue-50 text-blue-700';
+}
+
+function daysUntil(date: string) {
+  const due = new Date(date);
+  const today = new Date();
+  due.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - today.getTime()) / 86_400_000);
 }
 
 function ChartCard({ title, note, children, className = '' }: { title: string; note: string; children: React.ReactNode; className?: string }) {
@@ -73,6 +84,33 @@ export default function Dashboard() {
         apiGet<DashboardData>('/dashboard', filters),
         apiGet<ApplicationRow[]>('/applications', { ...filters, limit: 6, sort_by: 'submitted_at', sort_order: 'desc' }),
       ]);
+      if (!summary.attentionQueue || !summary.attentionSummary) {
+        const [queueApplications, complianceItems] = await Promise.all([
+          apiGet<ApplicationRow[]>('/applications', { ...filters, limit: 500, sort_by: 'deadline', sort_order: 'asc' }),
+          user?.role === 'evc_committee'
+            ? Promise.resolve<ComplianceQueueItem[]>([])
+            : apiGet<ComplianceQueueItem[]>('/compliance'),
+        ]);
+        const cutoff = Date.now() + 30 * 86_400_000;
+        const candidates = [
+          ...queueApplications
+            .filter((item): item is ApplicationRow & { deadline: string } =>
+              Boolean(item.deadline) && !['approved', 'rejected'].includes(item.status))
+            .map((item) => ({ id: item.id, kind: 'Application', title: item.id, due_date: item.deadline, status: item.status })),
+          ...complianceItems
+            .filter((item) => item.status !== 'verified' && new Date(item.due_date).getTime() <= cutoff)
+            .filter((item) => !filters.region || queueApplications.some((app) => app.id === item.application_id))
+            .map((item) => ({ id: item.id, kind: 'Compliance', title: item.description, due_date: item.due_date, status: item.status })),
+        ].filter((item) => new Date(item.due_date).getTime() <= cutoff);
+        const overdue = candidates
+          .filter((item) => new Date(item.due_date).getTime() < Date.now())
+          .sort((left, right) => right.due_date.localeCompare(left.due_date));
+        const upcoming = candidates
+          .filter((item) => new Date(item.due_date).getTime() >= Date.now())
+          .sort((left, right) => left.due_date.localeCompare(right.due_date));
+        summary.attentionQueue = [...overdue.slice(0, 5), ...upcoming.slice(0, 5)];
+        summary.attentionSummary = { overdue: overdue.length, dueSoon: upcoming.length };
+      }
       setData(summary);
       setApplications(rows);
       setUpdatedAt(new Date());
@@ -83,9 +121,13 @@ export default function Dashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters]);
+  }, [filters, user?.role]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => { void refresh(); }, 60_000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
 
   const visibleApplications = useMemo(() => {
     const query = tableSearch.toLowerCase().trim();
@@ -97,6 +139,15 @@ export default function Dashboard() {
     const hour = new Date().getHours();
     return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   }, []);
+  const attentionItems = data?.attentionQueue
+    || data?.upcomingDeadlines.map((item) => ({ ...item, status: 'pending' }))
+    || [];
+  const overdueCount = data?.attentionSummary?.overdue
+    ?? attentionItems.filter((item) => daysUntil(item.due_date) < 0).length;
+  const dueSoonCount = data?.attentionSummary?.dueSoon ?? attentionItems.length;
+  const attentionLabel = data?.attentionSummary
+    ? overdueCount ? `${overdueCount} overdue` : dueSoonCount ? `${dueSoonCount} due soon` : 'On track'
+    : attentionItems.length ? `${attentionItems.length} in queue` : 'On track';
 
   async function exportApplications() {
     setExporting(true);
@@ -119,16 +170,31 @@ export default function Dashboard() {
         <div>
           <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.13em] text-brand-blue"><Sparkles size={14} /> Executive overview</div>
           <h1 className="page-title text-2xl font-bold text-brand-navy md:text-[28px]">{greeting}, {user?.role === 'admin' ? 'Administrator' : user?.full_name.split(' ')[0]}</h1>
-          <p className="mt-1 text-sm text-slate-500">Your AICTE approval and compliance overview.</p>
+          <p className="mt-1 text-sm text-slate-500">NEXORA prototype workflow overview · not an official AICTE data feed.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="hidden text-right sm:block"><p className="text-xs font-semibold text-slate-700">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p><p className="text-[10px] text-slate-400">{updatedAt ? `Updated ${updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Live data'}</p></div>
+          <div className="hidden text-right sm:block"><p className="text-xs font-semibold text-slate-700">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p><p className="text-[10px] text-slate-400">{updatedAt ? `NEXORA DB refreshed ${updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Prototype records'}</p></div>
           <select aria-label="Region filter" value={filters.region} onChange={(event) => setFilters({ ...filters, region: event.target.value })} className="h-9 min-w-32 px-3 text-xs">
             <option value="">All regions</option>{['North', 'South', 'East', 'West', 'Central'].map((region) => <option key={region}>{region}</option>)}
           </select>
           <button onClick={() => void refresh()} disabled={refreshing} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:text-brand-blue disabled:opacity-50"><RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />Refresh</button>
         </div>
       </header>
+
+      <section className="enterprise-card flex flex-wrap items-center justify-between gap-4 border-2 border-blue-200 bg-blue-50 p-4 shadow-md dark:border-blue-400/40 dark:bg-blue-950/40">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-brand-blue dark:bg-blue-900/70 dark:text-blue-200"><BookOpen size={19} /></span>
+          <div>
+            <h2 className="text-sm font-bold text-brand-navy">New here? Start with this dashboard</h2>
+            <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-600">Choose <b>All regions</b> or a region like <b>South</b> above to filter the overview. The cards and charts summarize your accessible records; open Applications to review a case, or AICTE public data to browse public institution information.</p>
+          </div>
+        </div>
+        <div className="flex shrink-0 gap-2 pl-[52px] sm:pl-0">
+          <Link to="/help#demo" className="rounded-lg bg-brand-navy px-3 py-2 text-[11px] font-semibold text-white shadow-sm transition hover:bg-blue-900">Start guided demo</Link>
+          <Link to="/applications" className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-[11px] font-semibold text-brand-blue shadow-sm transition hover:border-blue-400 hover:bg-blue-50 dark:border-blue-300/30 dark:bg-slate-900 dark:text-blue-200 dark:hover:bg-slate-800">Applications</Link>
+          <Link to="/aicte-data" className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-[11px] font-semibold text-brand-blue shadow-sm transition hover:border-blue-400 hover:bg-blue-50 dark:border-blue-300/30 dark:bg-slate-900 dark:text-blue-200 dark:hover:bg-slate-800">AICTE public data</Link>
+        </div>
+      </section>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {(data?.kpis || []).map((item, index) => {
@@ -201,18 +267,22 @@ export default function Dashboard() {
           </section>
 
           <section className="enterprise-card p-5">
-            <div className="mb-3 flex items-start justify-between"><div><h2 className="text-sm font-bold text-slate-800">Attention required</h2><p className="mt-1 text-[11px] text-slate-500">Upcoming deadlines from your authorized records</p></div><span className="rounded-md bg-amber-50 p-2 text-amber-700"><AlertTriangle size={16} /></span></div>
-            <ul className="divide-y divide-slate-100">{data.upcomingDeadlines.slice(0, 5).map((item) => {
-              const days = Math.ceil((new Date(item.due_date).getTime() - Date.now()) / 86400000);
-              const urgent = days < 0;
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div><h2 className="text-sm font-bold text-slate-800">Priority action queue</h2><p className="mt-1 text-[11px] text-slate-500">Overdue and upcoming work in your authorized records</p></div>
+              <span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${overdueCount ? 'bg-rose-50 text-rose-700' : dueSoonCount ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>{attentionLabel}</span>
+            </div>
+            <ul className="divide-y divide-slate-100">{attentionItems.slice(0, 6).map((item) => {
+              const days = daysUntil(item.due_date);
+              const overdue = days < 0;
+              const dueLabel = overdue ? `${Math.abs(days)} ${Math.abs(days) === 1 ? 'day' : 'days'} overdue` : days === 0 ? 'Due today' : `Due in ${days} days`;
               return <li key={`${item.kind}-${item.id}`} className="flex items-center justify-between gap-3 py-3">
-                <div className="flex min-w-0 items-center gap-3"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${urgent ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-700'}`}>{urgent ? <AlertTriangle size={15} /> : <CalendarClock size={15} />}</span>
+                <div className="flex min-w-0 items-center gap-3"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${overdue ? 'bg-rose-50 text-rose-600' : days <= 7 ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-brand-blue'}`}>{overdue ? <AlertTriangle size={15} /> : <CalendarClock size={15} />}</span>
                   <div className="min-w-0"><p className="truncate text-xs font-semibold text-slate-800">{item.title}</p><p className="mt-0.5 text-[10px] text-slate-500">{item.kind} · {new Date(item.due_date).toLocaleDateString()}</p></div>
                 </div>
-                <Link to={deadlineLink(item)} className="shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold text-brand-blue hover:bg-blue-50">View details</Link>
+                <div className="shrink-0 text-right"><p className={`text-[10px] font-semibold ${overdue ? 'text-rose-600' : days <= 7 ? 'text-amber-700' : 'text-slate-500'}`}>{dueLabel}</p><Link to={deadlineLink(item)} className="rounded-md px-1 py-1 text-[10px] font-semibold text-brand-blue hover:bg-blue-50">Review</Link></div>
               </li>;
             })}</ul>
-            {data.upcomingDeadlines.length === 0 && <div className="flex h-[165px] flex-col items-center justify-center text-center"><CheckCircle2 size={26} className="text-emerald-500" /><p className="mt-2 text-xs font-semibold text-slate-700">You’re all caught up</p><p className="mt-1 text-[10px] text-slate-500">No upcoming deadlines in your records.</p></div>}
+            {attentionItems.length === 0 && <div className="flex h-[165px] flex-col items-center justify-center text-center"><CheckCircle2 size={26} className="text-emerald-500" /><p className="mt-2 text-xs font-semibold text-slate-700">You’re all caught up</p><p className="mt-1 text-[10px] text-slate-500">No overdue items or deadlines in the next 30 days.</p></div>}
           </section>
         </section>
 

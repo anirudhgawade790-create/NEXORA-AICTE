@@ -62,6 +62,13 @@ export default function ApplicationDetail() {
   const officer = ['admin', 'regional_officer', 'bureau_officer'].includes(user?.role || '');
   const currentIndex = stageIndex(item.current_stage);
   const terminal = ['approved', 'rejected'].includes(item.status);
+  const verifiedDocuments = item.documents.filter((document) => document.status === 'verified').length;
+  const documentsNeedingAttention = item.documents.filter(
+    (document) => ['deficient', 'rejected', 'expired', 'expiring_soon'].includes(document.status),
+  ).length;
+  const evidenceProgress = item.documents.length
+    ? Math.round((verifiedDocuments / item.documents.length) * 100)
+    : 0;
 
   return <div className="space-y-5">
     <Link to="/applications" className="inline-flex items-center gap-2 text-xs font-semibold text-slate-500 transition hover:text-brand-blue"><ArrowLeft size={14} />Back to applications</Link>
@@ -111,7 +118,10 @@ export default function ApplicationDetail() {
       </section>
 
       <div className="space-y-5">
-        <section className="enterprise-card p-5"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700"><FileCheck2 size={16} /></span><div><h2 className="text-sm font-bold text-slate-800">Supporting documents</h2><p className="text-[10px] text-slate-500">Files linked to this application</p></div></div>
+        <section className="enterprise-card p-5"><div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700"><FileCheck2 size={16} /></span><div><h2 className="text-sm font-bold text-slate-800">Supporting documents</h2><p className="text-[10px] text-slate-500">Evidence review progress · {verifiedDocuments}/{item.documents.length} verified</p></div></div>{user?.role === 'institution' && <Link to={`/documents?application_id=${encodeURIComponent(item.id)}`} className="shrink-0 rounded-lg bg-brand-blue px-3 py-2 text-[10px] font-semibold text-white transition hover:bg-blue-700">Add evidence</Link>}</div>
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${evidenceProgress}%` }} /></div>
+          <p className="mt-2 text-[9px] text-slate-400">Tracks review status of linked files only; this is not an official completeness or eligibility check.</p>
+          {documentsNeedingAttention > 0 && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[10px] font-medium text-amber-800">{documentsNeedingAttention} linked {documentsNeedingAttention === 1 ? 'file needs' : 'files need'} attention.</p>}
           {item.documents.length ? <div className="mt-4 divide-y divide-slate-100">{item.documents.map((doc) => <div key={doc.id} className="flex items-center justify-between gap-3 py-3"><div className="flex min-w-0 items-center gap-2"><FileCheck2 size={15} className="shrink-0 text-slate-400" /><span className="min-w-0"><span className="block truncate text-xs font-semibold text-slate-700">{doc.file_name}</span><span className="text-[10px] text-slate-500">{doc.category}</span></span></div><span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] capitalize text-slate-600">{doc.status}</span></div>)}</div> : <p className="mt-4 text-xs text-slate-500">No linked documents.</p>}
         </section>
 
