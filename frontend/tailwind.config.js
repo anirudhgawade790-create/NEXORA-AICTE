@@ -5,16 +5,17 @@ export default {
     extend: {
       colors: {
         brand: {
-          navy: '#0f172a',
+          navy: '#102A56',
           blue: '#2563eb',
           cyan: '#0ea5e9',
           green: '#10b981',
           amber: '#f59e0b',
           red: '#ef4444',
         },
+        surface: '#F5F7FB',
       },
       boxShadow: {
-        card: '0 20px 45px rgba(15, 23, 42, 0.08)',
+        card: '0 1px 2px rgba(15, 23, 42, 0.03), 0 8px 24px rgba(15, 23, 42, 0.04)',
       },
     },
   },

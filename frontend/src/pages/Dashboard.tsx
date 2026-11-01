@@ -1,0 +1,249 @@
+import {
+  Activity, AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, CalendarClock,
+  CheckCircle2, Clock3, FileBarChart2, FileCheck2, Gauge, Landmark, RefreshCw,
+  ShieldAlert, Sparkles, Users,
+} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts';
+import { Link } from 'react-router-dom';
+import { apiDownload, apiGet } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+
+type DashboardData = {
+  kpis: { label: string; value: number; change: string }[];
+  statusDistribution: { name: string; value: number }[];
+  regionPendency: { region: string; value: number }[];
+  stageDistribution: { name: string; value: number }[];
+  monthlyTrend: { month: string; applications: number }[];
+  complianceCompletion: { name: string; percent: number }[];
+  upcomingDeadlines: { id: number | string; kind: string; title: string; due_date: string }[];
+};
+type ApplicationRow = {
+  id: string; institution: string; region: string; type: string; submittedAt: string;
+  stage: string; officer: string; daysPending: number; deadline: string | null; status: string;
+};
+
+const chartColors = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#7c3aed', '#0891b2'];
+const cardIcons = [FileBarChart2, Clock3, SearchIcon, CalendarClock, ShieldAlert, FileCheck2, AlertTriangle, CheckCircle2];
+const cardAccents = [
+  'bg-blue-50 text-blue-700', 'bg-amber-50 text-amber-700', 'bg-violet-50 text-violet-700',
+  'bg-cyan-50 text-cyan-700', 'bg-emerald-50 text-emerald-700', 'bg-rose-50 text-rose-700',
+  'bg-orange-50 text-orange-700', 'bg-teal-50 text-teal-700',
+];
+
+function SearchIcon() { return <Activity size={19} />; }
+
+function formatStage(value: string) {
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function statusTone(value: string) {
+  if (['approved', 'completed', 'verified'].includes(value.toLowerCase())) return 'bg-emerald-50 text-emerald-700';
+  if (['rejected', 'overdue', 'expired'].includes(value.toLowerCase())) return 'bg-rose-50 text-rose-700';
+  if (['returned', 'deficient'].includes(value.toLowerCase())) return 'bg-amber-50 text-amber-700';
+  return 'bg-blue-50 text-blue-700';
+}
+
+function ChartCard({ title, note, children, className = '' }: { title: string; note: string; children: React.ReactNode; className?: string }) {
+  return <section className={`enterprise-card p-5 ${className}`}>
+    <div className="mb-4"><h2 className="text-sm font-bold text-slate-800">{title}</h2><p className="mt-1 text-[11px] text-slate-500">{note}</p></div>
+    <div className="h-[240px] w-full">{children}</div>
+  </section>;
+}
+
+export default function Dashboard() {
+  const { user } = useAuth();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [applications, setApplications] = useState<ApplicationRow[]>([]);
+  const [error, setError] = useState('');
+  const [filters, setFilters] = useState({ region: '', application_type: '', stage: '', status: '' });
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [tableSearch, setTableSearch] = useState('');
+  const [exporting, setExporting] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const [summary, rows] = await Promise.all([
+        apiGet<DashboardData>('/dashboard', filters),
+        apiGet<ApplicationRow[]>('/applications', { ...filters, limit: 6, sort_by: 'submitted_at', sort_order: 'desc' }),
+      ]);
+      setData(summary);
+      setApplications(rows);
+      setUpdatedAt(new Date());
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load dashboard data');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [filters]);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const visibleApplications = useMemo(() => {
+    const query = tableSearch.toLowerCase().trim();
+    if (!query) return applications;
+    return applications.filter((item) => `${item.id} ${item.institution} ${item.type}`.toLowerCase().includes(query));
+  }, [applications, tableSearch]);
+
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    return hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  }, []);
+
+  async function exportApplications() {
+    setExporting(true);
+    try { await apiDownload('/reports/applications-pendency.csv', filters); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not export applications'); }
+    finally { setExporting(false); }
+  }
+
+  function deadlineLink(item: DashboardData['upcomingDeadlines'][number]) {
+    if (/^application$/i.test(item.kind)) return `/applications/${encodeURIComponent(String(item.id))}`;
+    if (/lease/i.test(item.title)) return '/lease';
+    return '/compliance';
+  }
+
+  const tooltipStyle = { borderRadius: 10, border: '1px solid #e6eaf0', boxShadow: '0 8px 24px rgba(15,23,42,.08)', fontSize: 12 };
+
+  return (
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.13em] text-brand-blue"><Sparkles size={14} /> Executive overview</div>
+          <h1 className="page-title text-2xl font-bold text-brand-navy md:text-[28px]">{greeting}, {user?.role === 'admin' ? 'Administrator' : user?.full_name.split(' ')[0]}</h1>
+          <p className="mt-1 text-sm text-slate-500">Your AICTE approval and compliance overview.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="hidden text-right sm:block"><p className="text-xs font-semibold text-slate-700">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</p><p className="text-[10px] text-slate-400">{updatedAt ? `Updated ${updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Live data'}</p></div>
+          <select aria-label="Region filter" value={filters.region} onChange={(event) => setFilters({ ...filters, region: event.target.value })} className="h-9 min-w-32 px-3 text-xs">
+            <option value="">All regions</option>{['North', 'South', 'East', 'West', 'Central'].map((region) => <option key={region}>{region}</option>)}
+          </select>
+          <button onClick={() => void refresh()} disabled={refreshing} className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:text-brand-blue disabled:opacity-50"><RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />Refresh</button>
+        </div>
+      </header>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {(data?.kpis || []).map((item, index) => {
+          const Icon = cardIcons[index] || Gauge;
+          const accent = cardAccents[index] || cardAccents[0];
+          const change = item.change || '';
+          const negative = /down|decrease|-/i.test(change);
+          const trend = /up|down|increase|decrease|%/i.test(change);
+          return <article key={item.label} className="enterprise-card group p-4 transition duration-200 hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-lg">
+            <div className="flex items-start justify-between gap-2"><p className="text-xs font-medium text-slate-500">{item.label}</p><span className={`flex h-9 w-9 items-center justify-center rounded-xl ${accent}`}><Icon size={18} /></span></div>
+            <div className="mt-4 flex items-end justify-between gap-2"><strong className="page-title text-[30px] font-bold leading-none text-brand-navy">{loading ? '—' : item.value.toLocaleString()}</strong>{trend && <span className={`inline-flex items-center gap-1 text-[10px] font-semibold ${negative ? 'text-rose-600' : 'text-emerald-600'}`}>{negative ? <ArrowDownRight size={13} /> : <ArrowUpRight size={13} />}{change}</span>}</div>
+            <p className="mt-2 text-[10px] text-slate-400">{change && !trend ? change : 'Current portfolio'}</p>
+          </article>;
+        })}
+        {!loading && !data?.kpis.length && <div className="enterprise-card col-span-full p-5 text-sm text-slate-500">No dashboard records yet.</div>}
+        {loading && Array.from({ length: 8 }, (_, index) => <div key={index} className="enterprise-card h-[126px] animate-pulse bg-slate-50" />)}
+      </div>
+
+      {error && <div role="alert" className="rounded-xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">Unable to load live dashboard data: {error}</div>}
+
+      {data && <>
+        <section className="grid gap-4 xl:grid-cols-2">
+          <ChartCard title="Application status" note="Portfolio distribution by current decision state">
+            <ResponsiveContainer width="100%" height="100%"><PieChart>
+              <Pie data={data.statusDistribution} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88} paddingAngle={3} stroke="none">
+                {data.statusDistribution.map((item, index) => <Cell key={item.name} fill={chartColors[index % chartColors.length]} />)}
+              </Pie>
+              <Tooltip contentStyle={tooltipStyle} />
+            </PieChart></ResponsiveContainer>
+            <div className="-mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2">{data.statusDistribution.map((item, index) => <span key={item.name} className="inline-flex items-center gap-1.5 text-[10px] capitalize text-slate-500"><i className="h-2 w-2 rounded-full" style={{ backgroundColor: chartColors[index % chartColors.length] }} />{item.name} <b className="text-slate-700">{item.value}</b></span>)}</div>
+          </ChartCard>
+
+          <ChartCard title="Regional pendency" note="Applications currently in process by region">
+            <ResponsiveContainer width="100%" height="100%"><BarChart data={data.regionPendency} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+              <CartesianGrid vertical={false} stroke="#eef2f7" />
+              <XAxis dataKey="region" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+              <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="value" name="Applications" fill="#2563eb" radius={[5, 5, 0, 0]} maxBarSize={38} />
+            </BarChart></ResponsiveContainer>
+          </ChartCard>
+
+          <ChartCard title="Monthly application trends" note="New submissions across recent months">
+            <ResponsiveContainer width="100%" height="100%"><AreaChart data={data.monthlyTrend} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
+              <defs><linearGradient id="submissionFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2563eb" stopOpacity={0.22} /><stop offset="95%" stopColor="#2563eb" stopOpacity={0.01} /></linearGradient></defs>
+              <CartesianGrid vertical={false} stroke="#eef2f7" />
+              <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 9, fill: '#64748b' }} />
+              <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Area type="monotone" dataKey="applications" name="Submissions" stroke="#2563eb" strokeWidth={2.5} fill="url(#submissionFill)" />
+            </AreaChart></ResponsiveContainer>
+          </ChartCard>
+
+          <ChartCard title="Workflow stage distribution" note="Applications across the approval lifecycle">
+            <ResponsiveContainer width="100%" height="100%"><BarChart layout="vertical" data={data.stageDistribution} margin={{ top: 0, right: 16, left: 18, bottom: 0 }}>
+              <CartesianGrid horizontal={false} stroke="#eef2f7" />
+              <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
+              <YAxis type="category" dataKey="name" width={104} tickLine={false} axisLine={false} tick={{ fontSize: 9, fill: '#64748b' }} tickFormatter={formatStage} />
+              <Tooltip contentStyle={tooltipStyle} labelFormatter={(value) => formatStage(String(value))} />
+              <Bar dataKey="value" name="Applications" fill="#102a56" radius={[0, 5, 5, 0]} maxBarSize={17} />
+            </BarChart></ResponsiveContainer>
+          </ChartCard>
+
+          <section className="enterprise-card p-5">
+            <div className="mb-4 flex items-start justify-between"><div><h2 className="text-sm font-bold text-slate-800">Compliance completion</h2><p className="mt-1 text-[11px] text-slate-500">Verified requirements by category</p></div><span className="rounded-md bg-emerald-50 p-2 text-emerald-700"><ShieldAlert size={16} /></span></div>
+            <div className="space-y-5 pt-1">{data.complianceCompletion.map((item) => <div key={item.name}>
+              <div className="mb-2 flex justify-between text-xs"><span className="font-medium text-slate-700">{item.name}</span><b className="text-slate-600">{item.percent}%</b></div>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.min(100, Math.max(0, item.percent))}%` }} /></div>
+            </div>)}{data.complianceCompletion.length === 0 && <p className="text-xs text-slate-500">No compliance records yet.</p>}</div>
+          </section>
+
+          <section className="enterprise-card p-5">
+            <div className="mb-3 flex items-start justify-between"><div><h2 className="text-sm font-bold text-slate-800">Attention required</h2><p className="mt-1 text-[11px] text-slate-500">Upcoming deadlines from your authorized records</p></div><span className="rounded-md bg-amber-50 p-2 text-amber-700"><AlertTriangle size={16} /></span></div>
+            <ul className="divide-y divide-slate-100">{data.upcomingDeadlines.slice(0, 5).map((item) => {
+              const days = Math.ceil((new Date(item.due_date).getTime() - Date.now()) / 86400000);
+              const urgent = days < 0;
+              return <li key={`${item.kind}-${item.id}`} className="flex items-center justify-between gap-3 py-3">
+                <div className="flex min-w-0 items-center gap-3"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${urgent ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-700'}`}>{urgent ? <AlertTriangle size={15} /> : <CalendarClock size={15} />}</span>
+                  <div className="min-w-0"><p className="truncate text-xs font-semibold text-slate-800">{item.title}</p><p className="mt-0.5 text-[10px] text-slate-500">{item.kind} · {new Date(item.due_date).toLocaleDateString()}</p></div>
+                </div>
+                <Link to={deadlineLink(item)} className="shrink-0 rounded-md px-2 py-1 text-[10px] font-semibold text-brand-blue hover:bg-blue-50">View details</Link>
+              </li>;
+            })}</ul>
+            {data.upcomingDeadlines.length === 0 && <div className="flex h-[165px] flex-col items-center justify-center text-center"><CheckCircle2 size={26} className="text-emerald-500" /><p className="mt-2 text-xs font-semibold text-slate-700">You’re all caught up</p><p className="mt-1 text-[10px] text-slate-500">No upcoming deadlines in your records.</p></div>}
+          </section>
+        </section>
+
+        <section className="enterprise-card overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+            <div><h2 className="text-sm font-bold text-slate-800">Recent applications</h2><p className="mt-1 text-[11px] text-slate-500">Latest records in your authorized portfolio</p></div>
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+              <input aria-label="Search recent applications" placeholder="Search ID, institution..." value={tableSearch} onChange={(event) => setTableSearch(event.target.value)} className="h-9 min-w-0 flex-1 px-3 text-xs sm:w-52" />
+              <button onClick={() => void exportApplications()} disabled={exporting} className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">{exporting ? 'Exporting…' : 'Export CSV'}</button>
+              <Link to="/applications" className="inline-flex h-9 items-center gap-1 rounded-lg bg-brand-navy px-3 text-xs font-semibold text-white transition hover:bg-blue-900">All applications <ArrowRight size={13} /></Link>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-[850px] w-full text-left text-xs">
+              <thead className="bg-slate-50/80 text-[10px] uppercase tracking-wide text-slate-500"><tr>{['Application', 'Institution', 'Region', 'Current stage', 'Officer', 'Submitted', 'Pending', 'Status'].map((label) => <th key={label} className="px-4 py-3 font-semibold">{label}</th>)}</tr></thead>
+              <tbody className="divide-y divide-slate-100">{visibleApplications.map((item) => <tr key={item.id} className="transition hover:bg-slate-50/70">
+                <td className="px-4 py-3"><Link to={`/applications/${item.id}`} className="font-semibold text-brand-blue hover:underline">{item.id}</Link></td>
+                <td className="px-4 py-3 font-medium text-slate-700">{item.institution}</td>
+                <td className="px-4 py-3 text-slate-500">{item.region}</td>
+                <td className="px-4 py-3 capitalize text-slate-600">{formatStage(item.stage)}</td>
+                <td className="px-4 py-3 text-slate-600">{item.officer}</td>
+                <td className="px-4 py-3 text-slate-500">{item.submittedAt ? new Date(item.submittedAt).toLocaleDateString() : '—'}</td>
+                <td className="px-4 py-3 text-slate-600">{item.daysPending} days</td>
+                <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-[10px] font-semibold capitalize ${statusTone(item.status)}`}>{item.status}</span></td>
+              </tr>)}</tbody>
+            </table>
+            {visibleApplications.length === 0 && <div className="p-8 text-center text-xs text-slate-500">{applications.length ? 'No recent applications match your search.' : 'No applications available in this view.'}</div>}
+          </div>
+          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-[10px] text-slate-500"><span>Showing {visibleApplications.length} recent records</span><Link to="/applications" className="font-semibold text-brand-blue hover:underline">Open application workspace</Link></div>
+        </section>
+      </>}
+    </div>
+  );
+}

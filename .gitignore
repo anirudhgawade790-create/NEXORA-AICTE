@@ -20,6 +20,8 @@ backend/uploads/
 
 # Environment / secrets
 .env
+backend/.env
+frontend/.env
 
 # Agent task review files (per-iteration, not committed)
 .agents/tasks/*/review.json

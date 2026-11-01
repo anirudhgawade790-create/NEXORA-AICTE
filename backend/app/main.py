@@ -1,131 +1,84 @@
+"""FastAPI application entry point for NEXORA AICTE."""
+
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
-app = FastAPI(title='NEXORA AICTE API', version='1.0.0')
+from app.config import settings
+from app.database import init_db
+from app.rate_limit import limiter
+from app.routers import (
+    admin, applications, audit, auth, compliance, dashboard, documents, evc,
+    lease, notifications, reports, users, workflow,
+)
+from app.services.scheduler import scheduler, scheduled_monitor
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    init_db()
+    if not scheduler.running:
+        scheduler.add_job(scheduled_monitor, "interval", minutes=5, id="deadline-monitor",
+                          replace_existing=True, max_instances=1)
+        scheduler.start()
+    yield
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
+
+
+app = FastAPI(
+    title="NEXORA AICTE API",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url="/docs" if settings.APP_ENV == "development" else None,
+    redoc_url="/redoc" if settings.APP_ENV == "development" else None,
+    openapi_url="/openapi.json" if settings.APP_ENV == "development" else None,
+)
+app.state.limiter = limiter
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        if not (
+            settings.APP_ENV == "development"
+            and request.url.path in {"/docs", "/redoc"}
+        ):
+            response.headers.setdefault(
+                "Content-Security-Policy",
+                "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+            )
+        if request.url.scheme == "https":
+            response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=[o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()],
     allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
-@app.get('/api/health')
+@app.get("/api/health")
 def health():
-    return {'status': 'ok', 'service': 'nexora-aicte-backend'}
+    return {"status": "ok", "service": "nexora-aicte-backend", "db": "ok"}
 
 
-@app.get('/api/dashboard')
-def dashboard():
-    return {
-        'kpis': [
-            {'label': 'Total Applications', 'value': 284, 'change': '+12.4%'} ,
-            {'label': 'Pending Applications', 'value': 82, 'change': '+5.2%'} ,
-            {'label': 'Under Scrutiny', 'value': 41, 'change': '+3.1%'} ,
-            {'label': 'Awaiting EVC', 'value': 18, 'change': '-1.3%'} ,
-            {'label': 'Awaiting Committee Review', 'value': 26, 'change': '+2.6%'} ,
-            {'label': 'Compliance Due Soon', 'value': 37, 'change': '+9.1%'} ,
-            {'label': 'Overdue Cases', 'value': 12, 'change': '-0.7%'} ,
-            {'label': 'Expired Documents', 'value': 9, 'change': '+1.4%'} ,
-        ],
-        'statusDistribution': [
-            {'name': 'Submitted', 'value': 72},
-            {'name': 'Under Scrutiny', 'value': 54},
-            {'name': 'EVC Scheduled', 'value': 38},
-            {'name': 'Committee Review', 'value': 52},
-            {'name': 'Approved', 'value': 48},
-            {'name': 'Returned', 'value': 20},
-        ],
-        'regionPendency': [
-            {'region': 'South', 'value': 64},
-            {'region': 'West', 'value': 52},
-            {'region': 'North', 'value': 43},
-            {'region': 'East', 'value': 39},
-            {'region': 'Central', 'value': 31},
-        ],
-        'monthlyTrend': [
-            {'month': 'Jan', 'applications': 34},
-            {'month': 'Feb', 'applications': 42},
-            {'month': 'Mar', 'applications': 48},
-            {'month': 'Apr', 'applications': 60},
-            {'month': 'May', 'applications': 57},
-            {'month': 'Jun', 'applications': 69},
-        ],
-        'complianceCompletion': [
-            {'name': 'Lease & Land', 'percent': 88},
-            {'name': 'Infrastructure', 'percent': 79},
-            {'name': 'Undertaking', 'percent': 92},
-            {'name': 'Staff & Faculty', 'percent': 74},
-        ],
-    }
-
-
-@app.get('/api/applications')
-def applications():
-    return [
-        {
-            'id': 'APP-2024-1842',
-            'institution': 'Lords Institute of Management',
-            'region': 'South',
-            'type': 'New Institute',
-            'submittedAt': '2024-10-06',
-            'stage': 'Initial Scrutiny',
-            'officer': 'R. Sharma',
-            'daysPending': 13,
-            'deadline': '2024-10-19',
-            'status': 'Under Review',
-            'priority': 'High',
-        },
-        {
-            'id': 'APP-2024-2198',
-            'institution': 'Apex College of Engineering',
-            'region': 'West',
-            'type': 'Extension',
-            'submittedAt': '2024-09-18',
-            'stage': 'Deficiency Check',
-            'officer': 'M. Nair',
-            'daysPending': 29,
-            'deadline': '2024-10-06',
-            'status': 'Deficiency Raised',
-            'priority': 'Medium',
-        },
-        {
-            'id': 'APP-2024-1124',
-            'institution': 'Blue Horizon School of Design',
-            'region': 'North',
-            'type': 'Approval',
-            'submittedAt': '2024-09-29',
-            'stage': 'EVC Scheduling',
-            'officer': 'A. Singh',
-            'daysPending': 18,
-            'deadline': '2024-10-14',
-            'status': 'Awaiting EVC',
-            'priority': 'High',
-        },
-    ]
-
-
-@app.get('/api/compliance')
-def compliance():
-    return [
-        {
-            'institution': 'Global Heights Technical Campus',
-            'applicationId': 'APP-2024-2021',
-            'description': 'Renewed lease validity proof',
-            'dueDate': '2024-10-16',
-            'status': 'Due Soon',
-            'daysRemaining': 6,
-            'officer': 'S. Verma',
-        },
-        {
-            'institution': 'Nirmala Polytechnic College',
-            'applicationId': 'APP-2024-1437',
-            'description': 'Infrastructure compliance evidence',
-            'dueDate': '2024-10-04',
-            'status': 'Overdue',
-            'daysRemaining': -2,
-            'officer': 'P. Iyer',
-        },
-    ]
+for api_router in (
+    auth.router, users.router, admin.router, applications.router, workflow.router,
+    dashboard.router, documents.router, compliance.router, lease.router, evc.router,
+    notifications.router, reports.router, audit.router,
+):
+    app.include_router(api_router)

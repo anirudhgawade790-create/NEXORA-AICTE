@@ -3,44 +3,77 @@
 @tailwind utilities;
 
 :root {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: Inter, 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #0f172a;
-  background: #f8fafc;
+  color: #1e293b;
+  background: #f5f7fb;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
 }
 
 html, body, #root {
   min-height: 100%;
-  height: 100%;
   margin: 0;
 }
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(37, 99, 235, 0.10), transparent 32%),
-    linear-gradient(180deg, #f8fafc 0%, #edf6ff 100%);
+  background: #f5f7fb;
 }
 
-* {
-  box-sizing: border-box;
+* { box-sizing: border-box; }
+
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+
+input:not([type='checkbox']):not([type='radio']),
+select,
+textarea {
+  border-color: #dce3ed;
+  border-radius: 9px;
+  color: #1e293b;
+  background-color: #fff;
+  transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
 
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+input:not([type='checkbox']):not([type='radio']):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #8bb5ff;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 10%);
 }
 
-::-webkit-scrollbar-track {
-  background: #e2e8f0;
+button, a { -webkit-tap-highlight-color: transparent; }
+
+::selection { color: #102a56; background: #dbeafe; }
+
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { border-radius: 9999px; background: #cbd5e1; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+.enterprise-card {
+  border: 1px solid #e6eaf0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 3%), 0 8px 24px rgb(15 23 42 / 3%);
 }
 
-::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  border-radius: 9999px;
+.page-title {
+  font-family: Inter, 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: -.035em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }
