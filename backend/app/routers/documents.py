@@ -18,7 +18,9 @@ from app.services.notifications_service import create_notification
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024
 ALLOWED_EXTENSIONS = {".pdf": "application/pdf", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"}
-UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploads"
+UPLOAD_DIR = Path(
+    os.environ.get("UPLOAD_DIR", str(Path(__file__).resolve().parents[2] / "uploads"))
+)
 
 
 async def store_upload(file: UploadFile) -> tuple[Path, int]:

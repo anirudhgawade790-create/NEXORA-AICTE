@@ -157,11 +157,23 @@ These are local prototype credentials only. Do not reuse the shared demo passwor
 
 ## Run locally
 
+### Run the complete stack with Docker Compose
+
+Docker Compose starts the production-mode API, PostgreSQL, and frontend behind one web entry point. The database and uploaded documents use persistent Docker volumes. The stack seeds fictional demo records into a fresh database.
+
+1. Copy `.env.production.example` to `.env.production`.
+2. Generate independent random values for `POSTGRES_PASSWORD` and `JWT_SECRET` (at least 32 characters for `JWT_SECRET`).
+3. Start the stack with `docker compose --env-file .env.production up -d --build`.
+4. Open `http://localhost:8080`. Check service status with `docker compose --env-file .env.production ps`; stop with `docker compose --env-file .env.production down`.
+
+For a remote deployment, run the same stack on a server with a persistent Docker host, configure a strong private secret file, set `NEXORA_PORT` and `CORS_ORIGINS` for the public hostname, and put HTTPS/reverse-proxy protection in front of it. Do not expose PostgreSQL directly. This prototype is not certified for real AICTE decisions or sensitive institutional records.
+
 ### Requirements
 
 - Python **3.12** recommended for the pinned backend dependency set.
 - Node.js and npm.
 - PowerShell on Windows (commands below use Windows paths).
+- The root `requirements.txt` mirrors `backend/requirements.txt` for Vercel's Python builder; keep both dependency lists in sync.
 
 ### 1. Configure and start the backend
 
