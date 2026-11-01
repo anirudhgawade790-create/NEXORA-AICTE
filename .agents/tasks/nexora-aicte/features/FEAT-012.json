@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-012",
+  "type": "feat",
+  "description": "Frontend admin + audit + help pages (pages 12-15): User & Role Management, Workflow Configuration, Audit Logs, and Help & System Info. Admin-only (except Help). Real backend endpoints, role-aware, loading/empty/error states.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/frontend/src/pages/UserManagement.tsx (page 12): GET /api/users (admin) -> table of users with role/region/institution/active; create user form (POST /api/users) with role select; edit (PUT /api/users/{id}) to change role/region/active; deactivate (DELETE). Show reset-demo-data action (POST /api/admin/reset-demo-data) with a confirm dialog + success toast that re-fetches. Clear labeling that this is fictional demo data.",
+    "Create e:/SIH26262/frontend/src/pages/WorkflowConfig.tsx (page 13): GET /api/workflow/rules -> ordered list of stages with requires_scrutiny/requires_evc/requires_committee flags, deadline_days, allowed_roles; admin edits via PUT /api/workflow/rules/{stage_key}; show that changing flags changes which stages an application traverses (a note + live link to Applications to verify); also manage reminder intervals (GET/PUT /api/admin/reminder-intervals) and escalation config (GET/PUT /api/admin/escalation-config) and document categories (GET/POST /api/admin/document-categories). Clearly state rules/timelines/escalation are configurable examples, not official AICTE regulatory assumptions.",
+    "Create e:/SIH26262/frontend/src/pages/AuditLogs.tsx (page 14): GET /api/audit-logs with filters (user/record_type/date range) + pagination; table of user, action, record, previous_status, updated_status, reason, workflow_stage, timestamp; read-only (no edit controls). Role-aware: admin/bureau see all, others see their own actions.",
+    "Create e:/SIH26262/frontend/src/pages/Help.tsx (page 15): static page describing the system, the 5 roles and their dashboards, the configurable workflow + safeguards (automated recommendations are distinct from official decisions; only competent authorized officials record statutory findings/approvals; not officially integrated with AICTE systems; demo data is fictional), the 6 demo scenarios with their click paths (pulled from the README written in FEAT-013 or inline), and reset-demo-data usage.",
+    "Add routes + nav items with role guards (UserManagement/WorkflowConfig/AuditLogs admin/bureau as appropriate; Help all roles).",
+    "Verify `npm run build` passes; admin flows persist and take effect. Commit: `git add -A && git commit -m 'FEAT-012: frontend user mgmt, workflow config, audit, help'` with build output + results."
+  ],
+  "acceptance_criteria": [
+    "`cd frontend && npm run build` succeeds with 0 TS errors.",
+    "Admin can create/edit/deactivate a user and it persists; reset-demo-data re-seeds and the user list refreshes.",
+    "Admin can change a workflow rule (e.g. toggle requires_evc) and a subsequent application transition honors it (verifiable from Applications).",
+    "Admin can change reminder intervals and escalation config; changes persist.",
+    "Audit Logs page is read-only and filters work; role scoping matches the backend.",
+    "Help page lists all 5 roles, the safeguards, and the 6 demo scenarios with click paths."
+  ],
+  "verification": [
+    "cd e:/SIH26262/frontend && npm run build  (exits 0)",
+    "Login as admin: create a user -> appears in list; deactivate -> reflects; reset-demo-data -> list resets to seeded users.",
+    "Login as admin: toggle a workflow rule flag -> create/transition an application -> confirm it follows the new path.",
+    "Login as admin: change reminder intervals -> a previously Expiring Soon doc may move to Valid.",
+    "Login as bureau: Audit Logs shows all rows read-only; login as institution: Audit Logs shows only their own actions.",
+    "Help page renders with all required sections."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

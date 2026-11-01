@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-007",
+  "type": "feat",
+  "description": "Notifications + escalation + scheduled deadline monitor. An in-app notification center with event types (submission, stage change, deficiency, upcoming processing deadline, EVC scheduling/completion, upcoming compliance deadline, lease/document expiry, overdue, pending verification, escalation). Each notification stores event_type, related_id, recipient, created_at, due_date, is_read, action_link. Email is labeled unconfigured when SMTP creds are empty. A background scheduler (APScheduler) monitors deadlines and creates overdue alerts + escalations at configurable levels 1 (responsible officer) / 2 (supervising officer) / 3 (designated competent authority). Adds the Overdue Cases dashboard KPI and the upcoming-deadlines chart.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/backend/app/schemas/notifications.py (NotificationOut, UnreadCount).",
+    "Create e:/SIH26262/backend/app/services/notifications_service.py: create_notification(db, event_type, related_id, recipient_id, message, due_date=None, action_link=None) inserts a Notifications row. Add helper hooks to be called from: application submission (notify assigned officer), stage change (notify institution), deficiency (notify institution), EVC schedule/complete (notify committee+institution), compliance due soon (notify institution+verifying officer), lease expiring/expired (notify institution), pending verification (notify verifying officer). Wire these calls into the existing routers (applications, evc, compliance, lease, documents) - small additions at the point each event happens.",
+    "Create e:/SIH26262/backend/app/services/escalation.py: escalate(db, kind, record_id, level) creates an Escalations row + a notification to the configured target for that level (level1 responsible officer, level2 supervising officer, level3 designated competent authority). Targets/levels are configurable via /api/admin/escalation-config (added to admin router).",
+    "Create e:/SIH26262/backend/app/services/scheduler.py: APScheduler BackgroundScheduler started on FastAPI startup (@app.on_event('startup')) running a job (e.g. every 5 minutes, configurable) that: runs expiry.update (FEAT-005), scans Applications past deadline and not final -> creates overdue notification + level-1 escalation if not already escalated; scans ComplianceSubmissions past due -> overdue notification + escalation; re-evaluates expiring-soon windows. Add a manual trigger endpoint POST /api/admin/run-monitor (admin) to run the job once for demos/tests.",
+    "Create e:/SIH26262/backend/app/routers/notifications.py: GET /api/notifications (me, with read filter + pagination), POST /api/notifications/{id}/read, GET /api/notifications/unread-count. (GET /api/admin/config already reports email configured/unconfigured from FEAT-002; ensure SMTP empty -> email labeled unconfigured in a /api/notifications/config or reuse admin/config with an email_configured boolean.)",
+    "Extend e:/SIH26262/backend/app/routers/admin.py: GET/PUT /api/admin/escalation-config (levels, intervals, targets). Extend dashboard.py: add kpi 'Overdue Cases' (applications past deadline not final) and chart 'upcoming deadlines' (next N deadlines across EVC/compliance/lease).",
+    "Include notifications router + start scheduler in main.py (guard so the scheduler starts once; on sqlite check_same_thread=False already set). Extend seed.py: scenario 6 application with a deadline in the past and not final, so the monitor run produces an overdue notification + level-1 escalation.",
+    "Commit: `git add -A && git commit -m 'FEAT-007: notifications center, escalation, scheduled monitor'` with curl commands + results (trigger workflow event -> notification, run-monitor -> overdue + escalation, unread-count, email unconfigured)."
+  ],
+  "acceptance_criteria": [
+    "Triggering an application transition creates a Notifications row for the institution; triggering a stage change creates one for the recipient.",
+    "GET /api/notifications returns the current user's notifications with is_read and action_link; POST .../read marks read; unread-count endpoint returns correct count.",
+    "POST /api/admin/run-monitor on the seeded overdue (scenario 6) application creates an overdue notification and a level-1 Escalation.",
+    "Email is reported unconfigured when SMTP_HOST is empty; in-app notifications still work.",
+    "Admin can GET/PUT /api/admin/escalation-config and the changed levels/targets are used by escalate().",
+    "/api/dashboard Overdue Cases KPI equals the DB count; upcoming-deadlines chart is non-empty."
+  ],
+  "verification": [
+    "Trigger a transition as an officer; curl /api/notifications -H institution token shows the stage-change notification; curl /api/notifications/unread-count returns the right number.",
+    "curl -X POST /api/admin/run-monitor -H admin token returns 200; then curl /api/notifications -H the responsible officer token shows an overdue notification; query Escalations shows a level-1 row for scenario 6.",
+    "curl /api/admin/config -H admin token reports email_configured=false (SMTP empty); curl /api/admin/escalation-config GET+PUT works.",
+    "curl /api/dashboard -H admin token: Overdue Cases KPI matches seeded overdue count; upcoming-deadlines chart has entries."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

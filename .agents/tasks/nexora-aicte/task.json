@@ -1,0 +1,21 @@
+{
+  "task_id": "task-nexora-aicte",
+  "task_description": "Build NEXORA AICTE, a full-stack web app that automates AICTE approval workflows, institutional compliance, EVC scheduling, application pendency, time-bound undertakings, and document-validity monitoring. FastAPI + SQLAlchemy/SQLite backend with JWT auth, configurable workflow engine, documents/OCR, compliance, lease/expiry, EVC scheduling, notifications/escalation, reports, audit; React+TS+Vite+Tailwind frontend with 15 role-based pages and 5 role dashboards. Seeded fictional demo data covering 6 scenarios. Work in place at e:/SIH26262 (no worktree).",
+  "status": "pending",
+  "feature_order": [
+    "FEAT-001",
+    "FEAT-002",
+    "FEAT-003",
+    "FEAT-004",
+    "FEAT-005",
+    "FEAT-006",
+    "FEAT-007",
+    "FEAT-008",
+    "FEAT-009",
+    "FEAT-010",
+    "FEAT-011",
+    "FEAT-012",
+    "FEAT-013"
+  ],
+  "blocked_reason": null
+}

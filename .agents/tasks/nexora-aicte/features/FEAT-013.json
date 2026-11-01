@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-013",
+  "type": "feat",
+  "description": "Final verification gate: prove the work is done. Write the README (setup + the exact click path for each of the 6 demo scenarios) and a .env.example with no real secrets, then run the full proof-the-work-is-done gate: frontend npm run build, backend uvicorn start + /docs lists endpoints + DB auto-init/seed, demo logins for all 5 roles landing on role-appropriate dashboards with live KPIs/charts, a backend RBAC check (regional officer cannot access another region's applications), all 6 demo scenarios reproducible end to end, and reset-demo-data working. This phase may only make small gap-fix edits to existing files; any larger change requires a warning to the user.",
+  "status": "pending",
+  "steps": [
+    "Write e:/SIH26262/README.md: project overview, stack, setup steps (backend venv + pip install + uvicorn, frontend npm install + npm run dev, env vars), the 5 demo logins (role + email + password, clearly fictional), the 6 demo scenarios each with an exact click path through the UI (1 Normal Application, 2 Deficient Application, 3 EVC Required, 4 Upcoming Compliance Deadline, 5 Expired Lease Document, 6 Overdue Escalation), the RBAC check (curl command proving a regional officer cannot access another region's application), reset-demo-data usage, and the safeguards statement (configurable rules/timelines/escalation are examples not official AICTE requirements; automated recommendations distinct from official decisions; not officially integrated with AICTE systems; demo data fictional).",
+    "Ensure e:/SIH26262/backend/.env.example and e:/SIH26262/frontend/.env.example exist with no real secrets (created in earlier FEATs; verify here) and reference them in the README.",
+    "Run the proof gate and record every command + result in the commit message: (a) cd frontend && npm run build (0 errors); (b) start backend, curl http://localhost:8000/docs lists all endpoints, curl /api/health ok, confirm sqlite created+seeded; (c) for each of the 5 roles: login -> land on role dashboard with KPIs/charts from /api/dashboard; (d) RBAC curl: regional officer token GET /api/applications/{other-region-id} returns 403/empty; (e) walk each of the 6 scenarios via the documented click paths and confirm the expected outcome; (f) reset-demo-data via admin UI or curl and confirm reseed.",
+    "If any gate fails, make the smallest gap-fix edit needed to pass (prefer fixing the relevant FEAT code). If the only way to satisfy a gate changes user-visible behavior or requires a larger redesign, do NOT make the change: call send_message with severity 'warning' describing the issue, the proposed change, its user-visible effect, and any behavior-preserving alternative, and wait for the answer.",
+    "Commit: `git add -A && git commit -m 'FEAT-013: README, env examples, proof gate'` with the full gate evidence in the body."
+  ],
+  "acceptance_criteria": [
+    "e:/SIH26262/README.md exists and documents setup, the 5 demo logins, all 6 scenario click paths, the RBAC curl check, reset-demo-data, and the safeguards statement.",
+    "e:/SIH26262/backend/.env.example and frontend/.env.example exist with no real secrets.",
+    "Frontend `npm run build` passes (0 TS errors).",
+    "Backend uvicorn starts; /docs lists all endpoints; DB initializes and seeds on first run.",
+    "All 5 demo role logins land on a role-appropriate dashboard with live KPIs/charts from the DB.",
+    "A documented curl proves a regional officer cannot access another region's application.",
+    "All 6 demo scenarios are reproducible end to end through the UI per the documented click paths.",
+    "reset-demo-data re-seeds the DB."
+  ],
+  "verification": [
+    "cd e:/SIH26262/frontend && npm run build  (exits 0)",
+    "cd e:/SIH26262/backend && venv\\Scripts\\python.exe -m uvicorn app.main:app --port 8000; curl http://localhost:8000/docs lists endpoints; curl http://localhost:8000/api/health ok; nexora.db exists and seeded (users>=5).",
+    "Login via UI as institution, regional_officer, bureau_officer, evc_committee, admin; each lands on a dashboard with non-zero KPIs from /api/dashboard.",
+    "RBAC: curl -H 'Authorization: Bearer <regional_officer_A token>' http://localhost:8000/api/applications/<region_B app id> returns 403 or empty.",
+    "Follow each documented scenario click path and confirm the outcome (normal approval path, deficiency return+resubmit, EVC schedule+complete, compliance due-soon alert+evidence, expired lease+renewal, overdue+escalation).",
+    "POST /api/admin/reset-demo-data (or admin UI button) reseeds; user list returns to seeded set."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

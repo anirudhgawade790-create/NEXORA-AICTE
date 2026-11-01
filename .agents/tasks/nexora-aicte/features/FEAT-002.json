@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Auth + RBAC + user management + reset-demo-data. JWT login/register endpoints, FastAPI dependencies that authenticate the JWT and enforce role + scope (region for regional officers, own-institution for institution users), admin-only user CRUD, and an admin reset-demo-data endpoint that clears and re-seeds all demo data. RBAC is enforced backend-side so frontend button hiding is not the security boundary.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/backend/app/schemas/__init__.py and e:/SIH26262/backend/app/schemas/auth.py (UserOut, LoginRequest, RegisterRequest, TokenResponse with access_token/token_type/user) and e:/SIH26262/backend/app/schemas/users.py (UserCreate, UserUpdate).",
+    "Create e:/SIH26262/backend/app/deps.py: get_db (re-export), get_current_user(token via OAuth2PasswordBearer or raw Authorization Bearer -> decode_access_token -> load User or 401), require_roles(*roles) dependency factory (403 if current user role not in roles), require_admin = require_roles('admin'), region_scope dep that returns the current user's region or None for non-regional roles, and an institution-ownership dep helper (institution users only access their own institution_id).",
+    "Create e:/SIH26262/backend/app/routers/__init__.py and e:/SIH26262/backend/app/routers/auth.py: POST /api/auth/register (creates institution user with role institution, hashes password, returns user) and POST /api/auth/login (validates credentials, returns TokenResponse). GET /api/auth/me returns current user.",
+    "Create e:/SIH26262/backend/app/routers/users.py: GET /api/users (admin: list all users with filters by role/region; paginated), POST /api/users (admin: create user with any role), PUT /api/users/{id} (admin: update role/region/active), DELETE /api/users/{id} (admin: deactivate). All require_roles('admin'). Also GET /api/users/me alias.",
+    "Create e:/SIH26262/backend/app/services/audit.py: log_action(db, user, action, record_type, record_id, previous_status, updated_status, reason, workflow_stage) inserts an AuditLogs row. Call it from login (action='login'), register, and all admin user mutations.",
+    "Create e:/SIH26262/backend/app/routers/admin.py: POST /api/admin/reset-demo-data (require_admin) -> within a transaction drop_all + create_all + seed_demo_data; returns counts. Wire a /api/admin/config GET returning whether email is configured (SMTP_HOST truthy) so frontend can label 'email unconfigured'.",
+    "Include the auth, users, admin routers in e:/SIH26262/backend/app/main.py. Ensure the 5 demo users from FEAT-001 seed have documented known passwords (record them in the README later; for now use a single shared dev password like 'demo1234' for all demo users, clearly fictional).",
+    "Commit: `git add -A && git commit -m 'FEAT-002: JWT auth, RBAC dependencies, user management, reset-demo-data'` with the curl commands run and their results in the body."
+  ],
+  "acceptance_criteria": [
+    "POST /api/auth/login returns 200 + a JWT for each of the 5 demo roles.",
+    "GET /api/users with an admin token returns the user list; with an institution or regional_officer token returns 403.",
+    "POST /api/auth/register creates a new institution user and returns 201.",
+    "POST /api/admin/reset-demo-data with admin token reseeds and returns counts; without a token returns 401.",
+    "Every login, register, and admin user mutation writes an AuditLogs row.",
+    "GET /api/admin/config reports email unconfigured when SMTP_HOST is empty."
+  ],
+  "verification": [
+    "Start backend: cd e:/SIH26262/backend && venv\\Scripts\\python.exe -m uvicorn app.main:app --port 8000",
+    "curl -X POST http://localhost:8000/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"<institution demo email>\",\"password\":\"demo1234\"}' returns 200 with access_token (repeat for each role)",
+    "curl http://localhost:8000/api/users -H 'Authorization: Bearer <admin token>' returns 200 with user array; same call with an institution token returns 403 (RBAC proof)",
+    "curl -X POST http://localhost:8000/api/admin/reset-demo-data -H 'Authorization: Bearer <admin token>' returns counts; calling AuditLogs shows the action"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

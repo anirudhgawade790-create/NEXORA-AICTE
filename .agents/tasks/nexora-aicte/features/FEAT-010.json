@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-010",
+  "type": "feat",
+  "description": "Frontend applications + documents pages (pages 3-6): Applications List (search/filter/sort/pagination), Application Details with the full timeline, the New Application Form, and Document Upload & Verification. All call real backend endpoints, are role-aware, and show loading/empty/error states + confirmation dialogs + success toasts.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/frontend/src/pages/ApplicationsList.tsx (page 3): table of applications (id, institution, region, type, submitted date, current stage, assigned officer, days pending, deadline, status, actions) from GET /api/applications; search + filters (region/type/status/stage/date range) + sort + pagination; role-aware action buttons (officers get transition/observation actions, institution gets view); clicking a row navigates to details. Use the UI table + filters.",
+    "Create e:/SIH26262/frontend/src/pages/ApplicationDetail.tsx (page 4): GET /api/applications/{id}; render header (institution, region, type, current stage, status, assigned officer, days pending, deadline); the complete timeline (ApplicationStage rows ordered, each with stage, actor, timestamp, reason, status); documents list; scrutiny observations; deficiency/resubmission history. Role-aware actions: officers can forward/return/reject via a ConfirmDialog that REQUIRES a reason (return/reject disabled without reason); institution can resubmit after a deficiency; evc_committee sees completion action when at EVC stage (delegates to EVC page in FEAT-011). 403 handled (redirect/empty).",
+    "Create e:/SIH26262/frontend/src/pages/NewApplication.tsx (page 5): form (institution select for institution users / auto for institution role; application type; region; supporting docs upload optional at creation) POST /api/applications; validation; on success redirect to the new application's detail page with a success toast; loading + error states.",
+    "Create e:/SIH26262/frontend/src/pages/Documents.tsx (page 6): list documents (GET /api/documents) with category/status/expiry filters; upload form (PDF/JPG/PNG, client-side type+size validation matching the backend 10MB) POST /api/documents; officer verification action (set status + remarks) POST /api/documents/{id}/verify; document metadata view + private file download via apiDownload (GET /api/documents/{id}/file); show OCR/processing status clearly (Under Verification when OCR unavailable) and never imply fraud. Role-aware: institution uploads, officers verify.",
+    "Add routes for these pages to e:/SIH26262/frontend/src/routes.tsx with the correct role guards; add nav items to AppLayout for roles that can access them.",
+    "Verify `npm run build` passes; each page loads real data and a create/upload persists. Commit: `git add -A && git commit -m 'FEAT-010: frontend applications + documents pages'` with build output + click-through results."
+  ],
+  "acceptance_criteria": [
+    "`cd frontend && npm run build` succeeds with 0 TS errors.",
+    "Applications List filters/search/sort/pagination re-query the API; role scoping matches the backend (regional officer sees only their region).",
+    "Application Details shows the complete timeline with timestamps, actor, and reason for each transition; the return/reject action requires a reason (button disabled otherwise).",
+    "New Application Form creates an application that persists (appears in the list and detail) with a success toast.",
+    "Document Upload validates type/size client-side and shows the server status (Under Verification when OCR unavailable); officer verify changes status; file download works for authorized users only.",
+    "All four pages have loading, empty, and error states and use confirmation dialogs for destructive/transition actions."
+  ],
+  "verification": [
+    "cd e:/SIH26262/frontend && npm run build  (exits 0)",
+    "Login as institution: New Application -> submit -> redirected to detail with timeline row; Applications List shows it.",
+    "Login as regional_officer: open a region application -> return for deficiency (reason required) -> success; institution resubmits -> timeline updates.",
+    "Login as institution: upload a PDF in Documents -> status Under Verification; login as officer -> verify it -> status Verified; download the file.",
+    "Attempt upload of a .txt -> blocked client-side; attempt 11MB -> blocked."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

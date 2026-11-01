@@ -1,0 +1,32 @@
+{
+  "id": "FEAT-005",
+  "type": "feat",
+  "description": "Compliance + undertakings + lease/document expiry + reminder config. Track time-bound institutional undertakings with due dates, evidence submission, officer verification, deficiency requests, and completion. A lease/document-expiry dashboard computes Valid / Expiring Soon / Expired / Renewal Awaited / Renewal Under Verification from expiry_date vs configurable reminder intervals (e.g. 90/60/30/7 days - examples only, not official AICTE). Renewals create a replacement document that goes under verification. Adds Compliance Due Soon dashboard KPI and the compliance completion chart.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/backend/app/schemas/compliance.py (ComplianceCreate, ComplianceOut with days_remaining, ComplianceVerifyRequest, LeaseDashboardResponse, ReminderConfig).",
+    "Create e:/SIH26262/backend/app/services/expiry.py: compute_document_status(document, reminder_intervals) -> sets status to 'expiring_soon' if expiry_date within max reminder interval, 'expired' if past; returns days_to_expiry. run_expiry_update(db) scans Documents with expiry_date and updates status; used by the scheduler in FEAT-007 and by the compliance/lease endpoints live.",
+    "Create e:/SIH26262/backend/app/routers/compliance.py: POST /api/compliance (institution: create undertaking with description + due_date + optional application_id); GET /api/compliance with filters (institution/status/due range) + computed days_remaining, scoped by role; POST /api/compliance/{id}/evidence (institution: upload supporting document, sets status 'submitted'); POST /api/compliance/{id}/verify (officer: verified/deficient with remarks); POST /api/compliance/{id}/deficiency (officer: request deficiency with reason) - all log to AuditLogs.",
+    "Create e:/SIH26262/backend/app/routers/lease.py: GET /api/lease/dashboard -> counts and lists for Valid Documents, Expiring Soon, Expired Documents, Renewal Awaited (expired + no replacement submitted), Renewal Under Verification (replacement submitted but not verified), computed from Documents with expiry_date vs reminder intervals; POST /api/lease/{document_id}/renew (institution: upload replacement document -> creates new Document linked via replacement_for, old doc status renewal_awaited/renewal_under_verification); admin GET/PUT /api/admin/reminder-intervals (configurable list of days, default [90,60,30,7]) - store in a ReminderInterval config or as Settings; examples only, clearly not official AICTE requirements.",
+    "Extend e:/SIH26262/backend/app/routers/dashboard.py: add kpi 'Compliance Due Soon' (compliance/undertakings due within 30 days and not completed) and chart complianceCompletion (by category: percent verified of total). Scope by role.",
+    "Include compliance + lease routers in main.py. Extend seed.py with scenario 4 (a compliance/undertaking record due in ~6 days -> due soon) and scenario 5 (a lease document past its expiry_date -> expired; another due soon -> expiring_soon; and one with a renewal submitted -> renewal_under_verification).",
+    "Commit: `git add -A && git commit -m 'FEAT-005: compliance, undertakings, lease/expiry, reminder config'` with curl commands + results (due-soon record, expired lease, renewal upload)."
+  ],
+  "acceptance_criteria": [
+    "A compliance record with a due date in the near future is returned with status due_soon and a correct days_remaining.",
+    "A lease document past its expiry_date appears in /api/lease/dashboard Expired Documents; one within a reminder interval appears in Expiring Soon.",
+    "An institution can POST /api/lease/{document_id}/renew with a replacement file; the old doc reflects Renewal Under Verification until the replacement is verified.",
+    "An officer can verify compliance evidence; a deficiency request requires a reason.",
+    "Admin can GET/PUT /api/admin/reminder-intervals and changing it changes which documents are flagged Expiring Soon.",
+    "/api/dashboard Compliance Due Soon KPI equals the DB count of near-due compliance records; complianceCompletion chart returns per-category percentages."
+  ],
+  "verification": [
+    "curl /api/compliance -H institution token: scenario-4 record shows due_soon with days_remaining matching (due_date - today).",
+    "curl /api/lease/dashboard -H admin token: Expired Documents count matches the seeded expired lease; Expiring Soon matches the seeded near-expiry doc; Renewal Under Verification matches the seeded renewal.",
+    "curl -F file=@<pdf> -F category='Lease Documents' http://localhost:8000/api/lease/{expired_doc_id}/renew -H institution token returns 201; old doc status becomes renewal_under_verification.",
+    "curl -X PUT /api/admin/reminder-intervals -d '[60,30,7]' -H admin token returns 200; a doc 80 days from expiry now stays Valid (not Expiring Soon).",
+    "curl /api/dashboard -H admin token: Compliance Due Soon KPI matches seeded count; complianceCompletion non-empty."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

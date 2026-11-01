@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+backend/__pycache__/
+backend/app/__pycache__/
+
+# Virtual environments
+.venv/
+backend/venv/
+
+# Node / frontend build
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Backend runtime artifacts
+backend/nexora.db
+backend/*.db
+backend/uploads/
+
+# Environment / secrets
+.env
+
+# Agent task review files (per-iteration, not committed)
+.agents/tasks/*/review.json

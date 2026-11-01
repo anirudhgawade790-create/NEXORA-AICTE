@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-004",
+  "type": "feat",
+  "description": "Documents + OCR + document categories. Institutions upload PDF/JPG/JPEG/PNG documents privately (never public URLs), with file-type and size validation, metadata extraction, a pluggable OCR layer that attempts pytesseract/pdfplumber if importable else marks the document Under Verification, and authorized manual verification by officers. Document statuses flow Uploaded->Under Verification->Verified/Deficient/Rejected. Adds document-category admin CRUD and the Expired Documents dashboard KPI.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/backend/app/schemas/documents.py (DocumentUploadResponse, DocumentOut, DocumentVerifyRequest {status, remarks}, DocumentCategoryOut).",
+    "Create e:/SIH26262/backend/app/services/ocr.py: a pluggable extractor. `try: import pytesseract; from PIL import Image except ImportError: pytesseract=None`. `try: import pdfplumber except ImportError: pdfplumber=None`. extract_text(path, mime_type) -> returns (text, is_attempted, summary) or (None, False, 'OCR not available - manual verification required') when neither lib is importable or the Tesseract binary is missing (catch exceptions). NEVER return a fraud verdict; OCR only assists officers.",
+    "Create e:/SIH26262/backend/app/routers/documents.py: POST /api/documents multipart (institution): fields application_id, category, expiry_date(optional), file; validate mime in {application/pdf, image/jpeg, image/png} and extension in {pdf,jpg,jpeg,png} and size<=10MB else 415/413; save privately under e:/SIH26262/backend/uploads/<uuid>_<originalname> (NOT in a static-served dir); create Documents row status 'uploaded', then run ocr.extract_text and set status 'under_verification' (or keep 'uploaded' if OCR unavailable, with a clear note in DocumentVerifications), insert a DocumentVerifications row with is_ocr_attempted + ocr_summary. GET /api/documents with filters (application/institution/category/status) scoped by role; GET /api/documents/{id}/metadata; GET /api/documents/{id}/file returns the bytes ONLY to authorized users (same institution or verifying officer) with FileResponse - never a public URL; POST /api/documents/{id}/verify (regional/bureau officer) sets verified/deficient/rejected with mandatory remarks and updates status + verified_by/at; logs to AuditLogs.",
+    "Create e:/SIH26262/backend/app/routers/admin.py (extend): document categories CRUD GET/POST/PUT /api/admin/document-categories (admin) backed by a categories table or a constants list - simplest: store categories in a DocumentCategory model added to models.py in FEAT-001? To avoid a schema change, store the 6 categories as a constant in code AND allow admin to manage extra categories via a small DocumentCategory model. If a new model is needed, add DocumentCategory(id, name, created_at) to models.py (create_all handles it on next startup) and seed the 6 default categories in seed.py.",
+    "Extend e:/SIH26262/backend/app/routers/dashboard.py: add kpis Expired Documents (count of Documents with status 'expired' or expiry_date < today). (Expiry status transitions are finalized in FEAT-005, but the count is computed live here.)",
+    "Include documents router in main.py. Extend seed.py to add demo documents for scenarios: a missing/deficient doc for scenario 2, a lease doc with expiry_date for scenario 5 (set near/expired dates), and supporting docs for scenario 1.",
+    "Commit: `git add -A && git commit -m 'FEAT-004: documents, pluggable OCR, verification, categories'` with curl upload/retrieve/verify/invalid-type/oversize commands + results."
+  ],
+  "acceptance_criteria": [
+    "Institution can upload a PDF and a PNG; the file is stored privately and a Documents row is created with status uploaded/under_verification.",
+    "Retrieving a document file works for the owning institution and assigned officer; a different institution gets 403.",
+    "Invalid file type returns 415 and oversized returns 413.",
+    "When OCR libs are not importable (expected in this env), the document status is under_verification with a clear 'manual verification required' note - never an error and never a fraud verdict.",
+    "An officer can POST /api/documents/{id}/verify to set verified/deficient/rejected with remarks, and an AuditLogs row is written.",
+    "Admin can list and add document categories.",
+    "/api/dashboard Expired Documents KPI equals the DB count of expired/expired-dated documents."
+  ],
+  "verification": [
+    "curl -F file=@<a local pdf> -F application_id=... -F category='Approval Supporting Documents' http://localhost:8000/api/documents -H 'Authorization: Bearer <institution token>' returns 201 with status under_verification.",
+    "curl http://localhost:8000/api/documents/{id}/file -H 'Authorization: Bearer <own institution token>' returns 200; with another institution's token returns 403.",
+    "curl upload with a .txt file returns 415; upload of an 11MB file returns 413.",
+    "curl -X POST /api/documents/{id}/verify -d '{\"status\":\"verified\",\"remarks\":\"matches record\"}' -H 'Authorization: Bearer <officer token>' returns 200; AuditLogs shows it.",
+    "curl /api/admin/document-categories -H 'Authorization: Bearer <admin token>' returns the 6 categories.",
+    "curl /api/dashboard -H admin token: Expired Documents KPI matches the seeded expired-lease document count."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

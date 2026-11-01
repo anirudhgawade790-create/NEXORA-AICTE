@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Applications + configurable workflow engine + initial dashboard endpoint. Applications CRUD with role-scoped listing/filters/pagination, a workflow engine that reads WorkflowRules (not a hardcoded path) to compute allowed transitions, requires a reason for every return/rejection, records timestamp+responsible user per transition into ApplicationStage timeline, supports deficiency return + institution resubmit, auto-advances when conditions are satisfied, and prevents unauthorized stage changes. Also create the /api/dashboard aggregation endpoint (extended in later FEATs) returning computed KPIs + chart datasets so dashboards never use hardcoded numbers.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/backend/app/schemas/applications.py (ApplicationCreate, ApplicationOut, ApplicationDetail, TransitionRequest {action: forward|return|reject|complete|resubmit, reason, target_stage?}, ObservationRequest) and e:/SIH26262/backend/app/schemas/dashboard.py (DashboardResponse with kpis, statusDistribution, regionPendency, stageDistribution, monthlyTrend).",
+    "Create e:/SIH26262/backend/app/services/workflow_engine.py: load ordered WorkflowRules; get_current_rule(application); compute_next_stage(current, action, rules) honoring requires_scrutiny/requires_evc/requires_committee flags; can_transition(user, application, action) checks role against rule.allowed_roles AND scope (region for regional_officer, own institution for institution); transition(db, application, action, user, reason) validates, writes an ApplicationStage row (entered_at now, exited_at on prior active row, actor_user_id=user, reason), updates application.current_stage/status, logs to AuditLogs, and auto-advances if all required conditions satisfied (e.g. after EVC completion -> next stage); return-for-deficiency requires reason else 400; reopening only via authorized procedure (admin or configured rule).",
+    "Create e:/SIH26262/backend/app/routers/applications.py: POST /api/applications (institution: create+submit, generates 'APP-YYYY-####' id, sets current_stage=submission, deadline from rule.deadline_days, assigns to region officer); GET /api/applications with filters region/application_type/status/current_stage/date range + search + sort + pagination, scoped by role (regional_officer sees own region, institution sees own, bureau/admin see all); GET /api/applications/{id} returns detail incl timeline (ApplicationStage ordered), documents, observations, assigned officer, deficiency/resubmission history, days_pending; POST /api/applications/{id}/transition {action,reason} authorized; POST /api/applications/{id}/resubmit (institution, after a deficiency return); POST /api/applications/{id}/observations (regional/bureau officer). Enforce 403 when out of scope.",
+    "Create e:/SIH26262/backend/app/routers/workflow.py: GET /api/workflow/rules (any auth) returns ordered rules; PUT /api/workflow/rules/{stage_key} (admin) updates requires_* flags/deadline_days/allowed_roles - changes take effect for subsequent transitions (configurable, not hardcoded).",
+    "Create e:/SIH26262/backend/app/routers/dashboard.py: GET /api/dashboard computes from DB (NOT hardcoded): kpis Total Applications, Pending Applications (status not final/approved/rejected), Under Scrutiny (current_stage initial_scrutiny/deficiency_check); charts statusDistribution (group by status), regionPendency (group by region), stageDistribution (group by current_stage), monthlyTrend (group by submitted_at month). Scope by role (institution sees own, regional sees own region, bureau/admin see all). Accept filters region/type/stage/date range.",
+    "Include applications, workflow, dashboard routers in e:/SIH26262/backend/app/main.py. Extend e:/SIH26262/backend/app/seed.py to add demo Applications across regions/stages for scenarios 1 (normal, mid-scrutiny), 2 (deficient, returned), and 3 (in EVC queue stage) so filters/scoping have data and timeline rows exist. Each seeded app gets ApplicationStage rows for its history.",
+    "Commit: `git add -A && git commit -m 'FEAT-003: applications, configurable workflow engine, dashboard endpoint'` with curl commands + results (create, transition with reason, timeline, 403 for unauthorized, region scope denial) in the body."
+  ],
+  "acceptance_criteria": [
+    "An institution can POST /api/applications and it persists with a generated id and an ApplicationStage timeline row.",
+    "An authorized officer can forward an application through configured stages; each transition creates an ApplicationStage row with timestamp + actor + reason.",
+    "A return/rejection without a reason is rejected with 400.",
+    "An unauthorized role cannot transition an application (403) and cannot access an application outside its scope (regional officer of region A gets 403/empty for region B app).",
+    "GET /api/dashboard returns KPIs and chart datasets computed from the DB counts (matching the seeded applications), scoped by the caller's role.",
+    "PUT /api/workflow/rules/{stage_key} by admin changes a rule and a subsequent transition honors the change (configurability).",
+    "Application reopen only via authorized procedure; an ordinary user cannot reopen."
+  ],
+  "verification": [
+    "Start backend; login as institution -> POST /api/applications with institution_id+application_type returns 201 with id and current_stage 'submission' (or initial_scrutiny after auto-advance).",
+    "Login as regional_officer for that region -> POST /api/applications/{id}/transition {action:'forward',reason:'documents in order'} returns 200 and GET /api/applications/{id} shows a new ApplicationStage row.",
+    "POST /api/applications/{id}/transition {action:'return'} with NO reason returns 400; with a reason returns 200.",
+    "Login as regional_officer of region A; GET /api/applications/{id} for a region-B app returns 403 or empty (RBAC proof - record the curl).",
+    "curl /api/dashboard with admin token returns kpis with numbers equal to seeded counts (not hardcoded 284 etc.); confirm Total Applications equals the seeded count.",
+    "PUT /api/workflow/rules/initial_scrutiny as admin returns 200; a subsequent transition reflects the change."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

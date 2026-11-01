@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-011",
+  "type": "feat",
+  "description": "Frontend EVC + compliance + lease/expiry + notifications + reports pages (pages 7-11): EVC Scheduling (calendar + table), Compliance Management, Lease & Document Expiry, Notifications center, Reports & Analytics with CSV downloads. All role-aware, calling real endpoints, with loading/empty/error states.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/frontend/src/pages/EVCScheduling.tsx (page 7): GET /api/evc; two views toggleable - a calendar (month grid or a recharts-based timeline of scheduled_date) and a table (appointment, application, date, location, committee, status, actions); officer schedule action (POST /api/evc) via a form with a date picker; committee member complete action (POST /api/evc/{id}/complete) with findings+recommendation form; role-aware.",
+    "Create e:/SIH26262/frontend/src/pages/Compliance.tsx (page 8): list compliance/undertakings (GET /api/compliance) with due-date highlighting (due soon / overdue badges) and days_remaining; institution create-undertaking form with due_date; institution evidence upload (POST /api/compliance/{id}/evidence); officer verify/deficiency actions with required remarks; status timeline per record; filters.",
+    "Create e:/SIH26262/frontend/src/pages/LeaseExpiry.tsx (page 9): GET /api/lease/dashboard; KPI tiles Valid / Expiring Soon / Expired / Renewal Awaited / Renewal Under Verification (computed from API); document table with expiry_date and days_to_expiry; institution renewal upload (POST /api/lease/{id}/renew) that creates a replacement doc; reminder intervals shown as configurable (examples only, labeled not official AICTE).",
+    "Create e:/SIH26262/frontend/src/pages/Notifications.tsx (page 10): GET /api/notifications with read/unread filter + pagination; mark-read action (POST /api/notifications/{id}/read); unread count badge in the header (fetch /api/notifications/unread-count); each notification shows event_type, related link (action_link), created_at, due_date; show an 'Email unconfigured' banner when /api/admin/config reports email_configured=false.",
+    "Create e:/SIH26262/frontend/src/pages/Reports.tsx (page 11): a report selector that downloads each CSV via apiDownload from /api/reports/*.csv (applications-pendency, region-performance, evc, compliance, documents, overdue, decisions); also render the dashboard charts inline (reuse the dashboard data) as a preview; filters passed as query params to the CSV endpoints; role-aware (regional officer CSVs scoped to their region).",
+    "Add routes + nav items for these pages with correct role guards.",
+    "Verify `npm run build` passes; each page loads real data and downloads produce CSVs. Commit: `git add -A && git commit -m 'FEAT-011: frontend EVC, compliance, lease, notifications, reports'` with build output + results."
+  ],
+  "acceptance_criteria": [
+    "`cd frontend && npm run build` succeeds with 0 TS errors.",
+    "EVC page shows calendar + table views; scheduling + completion persist and advance the application (verifiable from Application Details).",
+    "Compliance page shows due-soon/overdue badges with correct days_remaining; evidence upload + officer verify/deficiency persist.",
+    "Lease page shows the 5 expiry buckets computed from the API; renewal upload creates a replacement doc and flips the bucket to Renewal Under Verification.",
+    "Notifications page lists the current user's notifications, marks read, shows unread badge; Email-unconfigured banner shows when SMTP is empty.",
+    "Reports page downloads each of the 7 CSVs; regional officer CSVs contain only their region's rows."
+  ],
+  "verification": [
+    "cd e:/SIH26262/frontend && npm run build  (exits 0)",
+    "Login as officer: schedule an EVC, then as committee member complete it; confirm the application advances (open its detail).",
+    "Login as institution: create a compliance undertaking with a near due date -> shows due-soon badge; upload evidence; officer verifies -> status updates.",
+    "Login as institution: open Lease page -> expired lease shows in Expired bucket; upload renewal -> moves to Renewal Under Verification.",
+    "Login as any role: Notifications page shows their notifications; mark one read; header badge decrements; Email-unconfigured banner visible.",
+    "Login as bureau/admin: Reports page downloads each CSV (non-empty)."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

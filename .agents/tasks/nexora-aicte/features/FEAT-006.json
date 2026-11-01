@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-006",
+  "type": "feat",
+  "description": "EVC scheduling. Manage EVC appointments: schedule visits (date, location, committee members), expose calendar + table views, let authorized committee members/officers record visit completion with findings and recommendations, and tie EVC completion back to the workflow engine so the application advances past the EVC stage. Adds Awaiting EVC and Awaiting Committee Review dashboard KPIs.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/backend/app/schemas/evc.py (EVCAppointmentCreate {application_id, scheduled_date, location, committee_members[]}, EVCAppointmentOut, EVCCompleteRequest {findings, recommendation, status}).",
+    "Create e:/SIH26262/backend/app/routers/evc.py: GET /api/evc with filters (date range, status, region) returning appointments for calendar + table views, scoped by role (evc_committee sees assigned cases, officers see their region, admin all); POST /api/evc (officer: schedule - requires the application to be at evc_scheduling stage, creates EVCAppointments status 'scheduled'); GET /api/evc/{id}; POST /api/evc/{id}/complete (evc_committee or authorized officer: set findings + recommendation + status 'completed' + completed_by/at, then call workflow_engine to advance the application from evc_completion to the next configured stage). Log to AuditLogs.",
+    "Extend e:/SIH26262/backend/app/services/workflow_engine.py: handle EVC completion -> auto-advance to committee_stage if requires_committee else to authorised_decision; ensure the transition is recorded in ApplicationStage.",
+    "Extend e:/SIH26262/backend/app/routers/dashboard.py: add kpis 'Awaiting EVC' (applications at evc_scheduling or EVCAppointments scheduled) and 'Awaiting Committee Review' (applications at committee_stage). Scope by role.",
+    "Include evc router in main.py. Extend seed.py: scenario 3 application gets an EVCAppointments row with a scheduled_date (future), committee_members list; one seeded appointment already completed to exercise the advance path.",
+    "Commit: `git add -A && git commit -m 'FEAT-006: EVC scheduling, completion, dashboard KPIs'` with curl commands + results (schedule, complete, stage advance, calendar view)."
+  ],
+  "acceptance_criteria": [
+    "An officer can schedule an EVC visit for an application in the EVC queue; the EVCAppointments row is created and the application is visible in /api/evc.",
+    "A committee member can record visit completion with findings+recommendation; the application advances past the EVC stage (verified via /api/applications/{id} current_stage).",
+    "GET /api/evc returns appointments usable by a calendar (by scheduled_date) and a table view, scoped by role.",
+    "Scheduling an EVC for an application NOT at the EVC stage is rejected.",
+    "/api/dashboard Awaiting EVC and Awaiting Committee Review KPIs equal the DB counts and are scoped by role."
+  ],
+  "verification": [
+    "curl -X POST /api/evc -d '{\"application_id\":\"<evc-queue app>\",\"scheduled_date\":\"<future ISO>\",\"location\":\"Campus\",\"committee_members\":[<user ids>]}' -H officer token returns 201.",
+    "curl /api/evc?status=scheduled -H officer token returns the appointment; /api/evc?start=...&end=... returns calendar data by date.",
+    "curl -X POST /api/evc/{id}/complete -d '{\"findings\":\"...\",\"recommendation\":\"...\",\"status\":\"completed\"}' -H committee token returns 200; curl /api/applications/{id} shows current_stage advanced past evc_completion.",
+    "curl -X POST /api/evc for a non-EVC-stage app returns 409/400.",
+    "curl /api/dashboard -H admin token: Awaiting EVC + Awaiting Committee Review KPIs match seeded counts."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

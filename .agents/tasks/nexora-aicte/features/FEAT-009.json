@@ -1,0 +1,34 @@
+{
+  "id": "FEAT-009",
+  "type": "feat",
+  "description": "Frontend foundation + auth UI + Main Dashboard. Replace the single App.tsx dashboard with a real multi-page app: routing, an API client with Bearer token + 401 handling, an AuthContext with login/register/logout + token persistence, role-based route guards, an AppLayout with role-aware sidebar nav, a hand-rolled UI component library (Radix-free, matching the navy/white + blue/green theme) instead of shadcn to avoid alias/Radix config churn and keep `npm run build` stable, the Login + Registration pages, and the Main Dashboard page whose KPIs and charts all come from the real /api/dashboard endpoint. No hardcoded dashboard numbers.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/frontend/src/api/client.ts: a fetch wrapper using import.meta.env.VITE_API_BASE (default http://localhost:8000/api) that attaches Bearer token from localStorage, JSON handling, throws on !ok with the server message, and on 401 clears the token + redirects to /login. Export typed helpers apiGet/apiPost/apiPut/apiPatch/apiDelete and a apiDownload for CSV.",
+    "Create e:/SIH26262/frontend/src/auth/AuthContext.tsx: React context providing user, login(email,password), register(payload), logout, loading; persists token in localStorage; fetches /api/auth/me on mount if a token exists; exposes useAuth().",
+    "Create e:/SIH26262/frontend/src/components/ui/ hand-rolled components matching navy/white + blue/green (use the existing tailwind brand tokens and shadow-card): Button, Card, CardHeader/Title/Content, Input, Textarea, Select, Badge, Spinner, EmptyState, ErrorState, Modal (Dialog), ConfirmDialog, Toast/Toaster (context + container), Tabs, Table primitives, PageHeader, StatCard (KPI card), ChartCard. Keep them accessible (labels, aria). No new npm deps.",
+    "Create e:/SIH26262/frontend/src/components/layout/AppLayout.tsx: sticky header (brand 'NEXORA AICTE', current role badge, notifications bell linking to /notifications, user menu with logout) + a responsive sidebar with role-aware nav items (only links the role can access) + a mobile-friendly collapse. Reuse lucide-react icons.",
+    "Create e:/SIH26262/frontend/src/routes.tsx: route definitions for all 15 pages; a ProtectedRoute wrapper that redirects to /login when unauthenticated; a RoleRoute that redirects to the user's dashboard when the role is not allowed; role->default-dashboard mapping.",
+    "Rewrite e:/SIH26262/frontend/src/App.tsx to render <Routes> from routes.tsx inside AuthProvider (keep main.tsx BrowserRouter). Remove the old hardcoded dashboard JSX entirely.",
+    "Create e:/SIH26262/frontend/src/pages/Login.tsx and Register.tsx (page 1): forms calling the auth context; on success redirect to the role dashboard; show loading + error states; demo-login quick buttons that fill the 5 demo role credentials (clearly labeled fictional demo).",
+    "Create e:/SIH26262/frontend/src/pages/Dashboard.tsx (page 2): fetch /api/dashboard (scoped by role from the backend); render the 8 KPI StatCards and 6 charts (status distribution Bar, region pendency Pie, applications by stage Bar, monthly trend Bar, compliance completion progress bars, upcoming deadlines list/chart) using recharts; add filters (region/type/status/stage/date range) that re-query; loading skeletons, empty states, error state. All numbers come from the API.",
+    "Create e:/SIH26262/frontend/.env.example with VITE_API_BASE=http://localhost:8000/api.",
+    "Verify `cd frontend && npm run build` passes (tsc -b && vite build, 0 TS errors) and `npm run dev` serves; login as each of the 5 roles lands on /dashboard with live KPIs/charts. Commit: `git add -A && git commit -m 'FEAT-009: frontend foundation, auth UI, main dashboard'` with build output + login results."
+  ],
+  "acceptance_criteria": [
+    "`cd frontend && npm run build` succeeds with 0 TypeScript errors.",
+    "Login + register call the real backend; on success the user lands on the role dashboard; 401 logs out and redirects to /login.",
+    "The sidebar shows only the nav items the current role may access.",
+    "The Main Dashboard KPIs and charts render from /api/dashboard; there are no hardcoded dashboard numbers in the page (all values come from the API response).",
+    "Loading, empty, and error states are present on the dashboard.",
+    "No new npm dependencies were added (only existing react/react-router/recharts/lucide)."
+  ],
+  "verification": [
+    "cd e:/SIH26262/frontend && npm run build  (exits 0, no TS errors)",
+    "Start backend (uvicorn) and frontend (npm run dev); open http://localhost:5173/login; use each demo role's quick-login; confirm each lands on /dashboard with KPI numbers that change per role (regional officer sees only their region's totals).",
+    "Confirm the dashboard filters re-query the API and update the charts.",
+    "Open browser devtools network: dashboard data comes from GET /api/dashboard, not a hardcoded constant."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

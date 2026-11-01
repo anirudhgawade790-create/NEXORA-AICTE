@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-008",
+  "type": "feat",
+  "description": "Reports (downloadable CSV) + audit logs. CSV report endpoints computed from the DB for application pendency, region-wise processing performance, EVC scheduling/completion, compliance submissions, upcoming/expired documents, overdue actions, and application decisions. An audit log query endpoint with filters; audit rows are written by the audit helper across all sensitive actions and are not editable by ordinary users (no update endpoint). Finalizes the dashboard endpoint so all 8 KPIs and 6 charts are complete.",
+  "status": "pending",
+  "steps": [
+    "Create e:/SIH26262/backend/app/schemas/reports.py (empty/param schemas; CSV returns StreamingResponse).",
+    "Create e:/SIH26262/backend/app/routers/reports.py with GET endpoints returning CSV (text/csv, StreamingResponse) computed from DB, each accepting the standard filters (region/type/status/stage/date range) scoped by role: /api/reports/applications-pendency.csv (id, institution, region, type, stage, status, days_pending, deadline), /api/reports/region-performance.csv (region, total, pending, approved, rejected, avg_days), /api/reports/evc.csv (appointment id, application, scheduled_date, status, completed_at, region), /api/reports/compliance.csv (institution, application, description, due_date, status, days_remaining, officer), /api/reports/documents.csv (institution, category, status, expiry_date, days_to_expiry) covering upcoming+expired, /api/reports/overdue.csv (kind, record_id, region, days_overdue, escalated_level), /api/reports/decisions.csv (application id, institution, region, final_status, decided_by, decided_at, reason).",
+    "Create e:/SIH26262/backend/app/routers/audit.py: GET /api/audit-logs with filters (user/record_type/date range) + pagination, scoped so admin/bureau see all and other roles see their own actions (or are denied). NO POST/PUT/DELETE - audit logs are append-only and not editable by ordinary users.",
+    "Audit coverage check: ensure the audit helper in services/audit.py is called from login, register, all user mutations, all application transitions, document verifications, compliance verifications, EVC completions, escalations, and admin config changes. Add any missing calls found.",
+    "Finalize e:/SIH26262/backend/app/routers/dashboard.py: confirm all 8 KPIs (Total Applications, Pending Applications, Under Scrutiny, Awaiting EVC, Awaiting Committee Review, Compliance Due Soon, Overdue Cases, Expired Documents) and all 6 charts (status distribution, region pendency, applications by stage, monthly trend, compliance completion, upcoming deadlines) are present and computed from DB, scoped by role.",
+    "Include reports + audit routers in main.py. Commit: `git add -A && git commit -m 'FEAT-008: CSV reports, audit logs, finalized dashboard'` with curl commands + results (each CSV non-empty for seeded data, audit row after an action)."
+  ],
+  "acceptance_criteria": [
+    "All 7 CSV report endpoints return 200 text/csv with a header row and seeded-data rows (non-empty).",
+    "GET /api/audit-logs returns rows; performing a transition then re-querying shows the new row with user, previous_status, updated_status, reason, workflow_stage.",
+    "There is no endpoint that lets an ordinary user create/update/delete an audit log row.",
+    "/api/dashboard returns all 8 KPIs and 6 charts computed from the DB, scoped by the caller's role, with no hardcoded numbers.",
+    "Reports respect role scope (regional officer CSV only contains their region; institution only their own)."
+  ],
+  "verification": [
+    "curl /api/reports/applications-pendency.csv -H admin token returns CSV with >=1 data row; repeat for region-performance, evc, compliance, documents, overdue, decisions - all non-empty.",
+    "Perform a transition as an officer; curl /api/audit-logs -H admin token shows the new row with prev/new status + reason + stage.",
+    "curl /api/dashboard -H admin token returns exactly 8 kpis and 6 chart datasets; confirm kpi counts match DB (Total Applications == count of applications, etc.).",
+    "curl /api/reports/applications-pendency.csv -H regional_officer token returns only that region's rows (RBAC scope)."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
