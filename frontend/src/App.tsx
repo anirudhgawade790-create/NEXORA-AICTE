@@ -3,10 +3,12 @@ import type { ReactNode } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import AppLayout from './components/layout/AppLayout';
+import SupportAssistant from './components/layout/SupportAssistant';
 import { ThemeProvider } from './theme/ThemeContext';
 
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
+const Landing = lazy(() => import('./pages/Landing'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const LiveAICTEData = lazy(() => import('./pages/LiveAICTEData'));
 const ApplicationsList = lazy(() => import('./pages/ApplicationsList'));
@@ -37,29 +39,32 @@ function Protected({ children, roles }: { children: ReactNode; roles?: string[] 
 
 function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/login" element={<Page><Login /></Page>} />
-      <Route path="/register" element={<Page><Register /></Page>} />
-      <Route path="/" element={<Protected><AppLayout /></Protected>}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Page><Dashboard /></Page>} />
-        <Route path="aicte-data" element={<Page><LiveAICTEData /></Page>} />
-        <Route path="applications" element={<Page><ApplicationsList /></Page>} />
-        <Route path="applications/new" element={<Protected roles={['institution']}><Page><NewApplication /></Page></Protected>} />
-        <Route path="applications/:id" element={<Page><ApplicationDetail /></Page>} />
-        <Route path="documents" element={<Page><Documents /></Page>} />
-        <Route path="evc" element={<Protected roles={['admin', 'regional_officer', 'bureau_officer', 'evc_committee']}><Page><EVCScheduling /></Page></Protected>} />
-        <Route path="compliance" element={<Page><Compliance /></Page>} />
-        <Route path="lease" element={<Page><LeaseExpiry /></Page>} />
-        <Route path="notifications" element={<Page><Notifications /></Page>} />
-        <Route path="reports" element={<Page><Reports /></Page>} />
-        <Route path="users" element={<Protected roles={['admin']}><Page><UserManagement /></Page></Protected>} />
-        <Route path="workflow" element={<Protected roles={['admin']}><Page><WorkflowConfig /></Page></Protected>} />
-        <Route path="audit" element={<Protected roles={['admin', 'bureau_officer']}><Page><AuditLogs /></Page></Protected>} />
-        <Route path="help" element={<Page><Help /></Page>} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Page><Landing /></Page>} />
+        <Route path="/login" element={<Page><Login /></Page>} />
+        <Route path="/register" element={<Page><Register /></Page>} />
+        <Route element={<Protected><AppLayout /></Protected>}>
+          <Route path="dashboard" element={<Page><Dashboard /></Page>} />
+          <Route path="aicte-data" element={<Page><LiveAICTEData /></Page>} />
+          <Route path="applications" element={<Page><ApplicationsList /></Page>} />
+          <Route path="applications/new" element={<Protected roles={['institution']}><Page><NewApplication /></Page></Protected>} />
+          <Route path="applications/:id" element={<Page><ApplicationDetail /></Page>} />
+          <Route path="documents" element={<Page><Documents /></Page>} />
+          <Route path="evc" element={<Protected roles={['admin', 'regional_officer', 'bureau_officer', 'evc_committee']}><Page><EVCScheduling /></Page></Protected>} />
+          <Route path="compliance" element={<Page><Compliance /></Page>} />
+          <Route path="lease" element={<Page><LeaseExpiry /></Page>} />
+          <Route path="notifications" element={<Page><Notifications /></Page>} />
+          <Route path="reports" element={<Page><Reports /></Page>} />
+          <Route path="users" element={<Protected roles={['admin']}><Page><UserManagement /></Page></Protected>} />
+          <Route path="workflow" element={<Protected roles={['admin']}><Page><WorkflowConfig /></Page></Protected>} />
+          <Route path="audit" element={<Protected roles={['admin', 'bureau_officer']}><Page><AuditLogs /></Page></Protected>} />
+          <Route path="help" element={<Page><Help /></Page>} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <SupportAssistant />
+    </>
   );
 }
 

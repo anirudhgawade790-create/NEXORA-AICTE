@@ -12,7 +12,7 @@ from app.config import settings
 from app.database import init_db
 from app.rate_limit import limiter
 from app.routers import (
-    admin, aicte_data, applications, audit, auth, compliance, dashboard, documents, evc,
+    admin, aicte_data, applications, assistant, audit, auth, compliance, dashboard, documents, evc,
     lease, notifications, reports, users, workflow,
 )
 from app.services.aicte_data import scheduled_public_data_sync, source_is_configured
@@ -89,7 +89,7 @@ def health():
 
 
 for api_router in (
-    auth.router, users.router, admin.router, aicte_data.router, applications.router, workflow.router,
+    auth.router, users.router, admin.router, aicte_data.router, applications.router, assistant.router, workflow.router,
     dashboard.router, documents.router, compliance.router, lease.router, evc.router,
     notifications.router, reports.router, audit.router,
 ):

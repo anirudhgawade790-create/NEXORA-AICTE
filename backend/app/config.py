@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     AICTE_OGD_PUBLISHER_VERIFIED: bool = False
     AICTE_SYNC_INTERVAL_MINUTES: int = Field(default=360, ge=5, le=1440)
 
+    # Optional hosted assistant. The API key remains server-side.
+    AI_CHAT_API_KEY: str = ""
+    AI_CHAT_MODEL: str = "gpt-4o-mini"
+
     # JWT signing material must be supplied outside source control.
     JWT_SECRET: str = ""
     JWT_ALG: str = "HS256"

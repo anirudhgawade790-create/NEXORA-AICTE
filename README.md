@@ -1,51 +1,137 @@
 <div align="center">
 
-# NEXORA AICTE
-
-### Approval & Compliance Intelligence
-
-**A premium, role-aware workflow prototype for institutional approvals, scrutiny and compliance operations.**
+<img src="./assets/nexora-readme-banner.svg" alt="NEXORA — AICTE Approval and Compliance Workspace" width="100%" />
 
 <br />
 
-![React](https://img.shields.io/badge/React-18-149ECA?logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
-![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)
-![License](https://img.shields.io/badge/status-prototype-52627A)
+[![React](https://img.shields.io/badge/React-18.3-149ECA?logo=react&logoColor=white)](https://react.dev/)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)
+![FastAPI](https://img.shields.io/badge/API-FastAPI-0.162-009688?logo=fastapi&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/ORM-SQLAlchemy-2.0-8B0000?logo=sqlalchemy&logoColor=white)
+![Database](https://img.shields.io/badge/DB-SQLite%20%7C%20PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![Status](https://img.shields.io/badge/Status-Fictional%20prototype-52627A)
 
 <br />
 
-**Executive dashboard · Application lifecycle · EVC coordination · Compliance tracking · Auditability**
+[🚀 Quick start](#-quick-start) · [🎬 Demo accounts](#-demo-accounts--scenarios) · [🧱 Architecture](#-tech-stack--architecture) · [⚙️ Configuration](#️-configuration) · [🔒 Safeguards](#-security--limitations)
 
 </div>
 
-> **Prototype notice:** NEXORA is a fictional demonstration project. It is not an official AICTE product, is not connected to AICTE systems, and must not be used to make official regulatory or approval decisions.
+> [!IMPORTANT]
+> **NEXORA is a fictional workflow prototype — not an official AICTE product and not connected to AICTE systems.** All seeded institutions and applications are demo records. Do not use this project for official regulatory or approval decisions.
 
 ---
 
-## Contents
+## 🚀 Quick start
 
-- [What is NEXORA?](#what-is-nexora)
-- [What is included](#what-is-included)
-- [Roles and access](#roles-and-access)
-- [Application workflow](#application-workflow)
-- [Demo accounts and scenarios](#demo-accounts-and-scenarios)
-- [Run locally](#run-locally)
-- [Configuration](#configuration)
-- [Project structure](#project-structure)
-- [Security and limitations](#security-and-limitations)
-- [Useful commands](#useful-commands)
+Already installed and configured? Start the app in two terminals:
 
-## What is NEXORA?
+**Terminal 1 — backend** (`http://localhost:8000`)
+```powershell
+cd backend
+.\venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+**Terminal 2 — frontend** (`http://localhost:5173`)
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` and sign in with `admin@nexora-demo.in` / `demo1234`.
+
+> **First run?** Follow [Run locally](#-run-locally) to create the Python environment and configure `backend/.env` first.
+>
+> Prefer Docker? Once `.env.production` is configured, the full stack (PostgreSQL + backend + frontend) runs on `:8080`:
+> ```powershell
+> docker compose --env-file .env.production up -d --build
+> ```
+> See [🐳 Production stack](#-run-locally) for setup.
+
+---
+
+## 📋 At a glance
+
+| What it helps with | What teams can do |
+|---|---|
+| **Applications** | Submit, search and track cases through configurable review stages. |
+| **Documents & compliance** | Upload evidence, review status, follow deadlines and monitor lease renewals. |
+| **EVC operations** | Coordinate visits, committee assignments, findings and recommendations. |
+| **Insights & accountability** | View role-scoped dashboards, reports, notifications and audit history. |
+
+Built with **React + TypeScript**, **FastAPI** and **SQLAlchemy**. The app includes a public product landing page, sign-in and institution access requests, a role-aware workspace, and a help assistant available across pages.
+
+### Quick demo sign-in
+
+| Email | Password |
+|---|---|
+| `admin@nexora-demo.in` | `demo1234` |
+
+Use these **local prototype credentials only**. More role-specific accounts and guided demo scenarios are listed in [🎬 Demo accounts & scenarios](#-demo-accounts--scenarios).
+
+---
+
+## 📑 Contents
+
+<details open>
+<summary><strong>Browse the guide</strong></summary>
+
+- [What is NEXORA?](#-what-is-nexora)
+- [Tech stack & architecture](#-tech-stack--architecture)
+- [What is included](#-what-is-included)
+- [AI and automation scope](#-ai-and-automation-scope)
+- [Roles and access](#-roles-and-access)
+- [Application workflow](#-application-workflow)
+- [Demo accounts and scenarios](#-demo-accounts--scenarios)
+- [Run locally](#-run-locally)
+- [Configuration](#️-configuration)
+- [Public AICTE data integration](#-public-aicte-data-integration)
+- [Project structure and screens](#-project-structure--screens)
+- [Security and limitations](#-security--limitations)
+- [Useful commands](#-useful-commands)
+
+</details>
+
+## 🧭 What is NEXORA?
 
 NEXORA brings the main steps of an institutional approval and compliance journey into one responsive workspace. Institutions can submit applications and supporting evidence; officers can review records and move them through configurable stages; EVC committees can coordinate visits and submit findings; administrators can manage access and prototype workflow settings.
 
-The interface has been redesigned as a polished enterprise SaaS experience with a navy-and-blue visual system, responsive navigation, clear record states, data visualizations, and reusable page styling. The frontend is built around the existing API contracts and role checks. Dashboard metrics and operational records come from the backend rather than presentation-only hardcoded totals.
+The interface uses a responsive navy-and-blue design with clear record states, data visualizations and role-aware navigation. Dashboard metrics and operational records come from the backend rather than presentation-only hardcoded totals.
 
-## What is included
+**A typical journey:** an institution submits a case → an authorized officer reviews it → an EVC visit can be coordinated → the configured workflow records progress and outcome. Each account sees the records and actions allowed for its role.
+
+## 🧱 Tech stack & architecture
+
+| Layer | Stack |
+|---|---|
+| **Frontend** | React 18.3, TypeScript 5.6, Vite 5.4, React Router 6.28, Tailwind CSS 3.4, Recharts 2.13, Lucide icons |
+| **Backend** | FastAPI 0.162, Uvicorn 0.30, SQLAlchemy 2.0, Pydantic 2.9 / pydantic-settings 2.6, PyJWT 2.15, Passlib + bcrypt, APScheduler 3.10, SlowAPI rate limiting |
+| **Database** | SQLite (local prototype) · PostgreSQL via `psycopg` 3.2 (production) |
+| **Runtime** | Python 3.12 · Node.js + npm |
+
+```mermaid
+flowchart TB
+    FE["React SPA<br/>(Vite dev :5173 / Nginx :8080)"]
+    PROXY["Vite dev proxy<br/>/api → 127.0.0.1:8000"]
+    API["FastAPI :8000"]
+    DB[("Database<br/>SQLite / PostgreSQL")]
+    OAI["OpenAI-compatible<br/>chat completions"]
+
+    FE -->|same-origin /api| PROXY --> API
+    API --> DB
+    API -.->|only if AI_CHAT_API_KEY set| OAI
+```
+
+**Request flow**
+- The browser loads the React SPA and calls the API on the **same-origin `/api` path**. In development, Vite proxies `/api/*` to `http://127.0.0.1:8000`; in the Docker stack, Nginx routes `/api/*` to the backend service.
+- Every protected route authenticates the JWT bearer token via `app/deps.py` and enforces **role + record-scope** checks (region, institution, application ownership).
+- The **assistant** route (`/api/assistant`) calls an OpenAI-compatible chat-completions endpoint **only when `AI_CHAT_API_KEY` is set**; otherwise it returns 503 and the frontend falls back to its local workspace guide. The key never leaves the backend.
+- Scheduled jobs (deadline monitor every 5 min; optional public-data sync) run via APScheduler inside the backend lifespan.
+
+## 📦 What is included
 
 ### Workspace and analytics
-
 - Role-aware navigation, collapsible desktop sidebar, mobile drawer, breadcrumbs, global application search, profile menu and notification count.
 - NEXORA prototype dashboard with application KPIs, status and regional charts, monthly trends, workflow stages, compliance progress, and a priority queue for overdue and upcoming work.
 - Separate Live AICTE Data Dashboard for public institution/approval data; it never merges official public data with prototype application records.
@@ -54,7 +140,6 @@ The interface has been redesigned as a polished enterprise SaaS experience with 
 - AICTE public institution dashboard with source attribution, synchronization status and last-successful-sync time.
 
 ### Application and operations
-
 - Institution application submission with a readiness checklist, plus application evidence-review progress and an application-linked upload shortcut.
 - Configurable workflow transitions, stage history, scrutiny observations, remarks and record-level access checks.
 - Document upload and review, private authenticated downloads, verification status, expiry information and optional advisory OCR.
@@ -64,21 +149,32 @@ The interface has been redesigned as a polished enterprise SaaS experience with 
 - In-app notifications, unread indicators, activity history and audit logs.
 
 ### Administration and support
-
 - User and role administration, regional assignment, activation/deactivation and institution association.
 - Configurable example workflow rules, reminder windows, escalation settings and document categories.
 - Administrator-triggered deadline monitor and a clearly labelled demo-data reset.
 - Role-aware guided demo scenarios, role descriptions and safeguards.
-- Premium split-screen sign-in and institution access-request screens.
+- Public landing page, split-screen sign-in, institution access requests and a help assistant available across public and signed-in pages.
 
 ### Visual design and usability
-
 - Responsive layouts for desktop, laptop, tablet and mobile.
 - Consistent navy, royal blue, white and soft off-white styling.
 - Lucide iconography, Recharts analytics, accessible form labels, visible focus states and reduced-motion support.
 - Clear empty, error and loading states across operational pages.
 
-## Roles and access
+## 🤖 AI and automation scope
+
+NEXORA is a workflow prototype — not an AICTE decision system. Here is what the assistant and automation actually do:
+
+| Capability | Scope |
+|---|---|
+| **Help assistant** | Provides a local workspace guide. Optional open-ended replies use an OpenAI-compatible endpoint only when `AI_CHAT_API_KEY` is configured; signed-in chat messages and recent context are then sent to the provider. The assistant cannot inspect records or perform actions. |
+| **Workflow and deadlines** | Uses configured rules for stage routing, reminders, escalations and dashboard indicators. These are not AI predictions or official timelines. |
+| **Document text extraction** | Optional OCR can help a person review a file; it does not verify authenticity or make decisions. OCR dependencies/engine are optional and may be unavailable. |
+| **Approval decisions** | No machine-learning approval model or automated fraud detector is included. Human review remains essential. |
+
+Do not send passwords, personal information or confidential institutional records to the assistant. The public AICTE data screen remains empty until an authorized, verified Open Government Data source is configured. Demo applications and institutions are fictional and must not be presented as live AICTE records.
+
+## 👥 Roles and access
 
 Every account has one of the following roles. Navigation visibility is not the security boundary: the API also authenticates requests and checks role and record scope.
 
@@ -103,7 +199,7 @@ Every account has one of the following roles. Navigation visibility is not the s
 | User management and workflow configuration | Administrator. |
 | Audit logs | Administrator and Bureau Officer. |
 
-## Application workflow
+## 🔀 Application workflow
 
 The seeded demo workflow contains eight configurable example stages:
 
@@ -120,7 +216,18 @@ Authorized users can advance a case according to its configured stage rules. Off
 
 The stage names, deadlines, reminder intervals and escalation settings are prototype configuration examples. They are **not official AICTE rules or statutory timelines**.
 
-## Demo accounts and scenarios
+```mermaid
+flowchart LR
+    A[Application submission] --> B[Initial scrutiny]
+    B --> C[Deficiency check]
+    C --> D[EVC scheduling]
+    D --> E[EVC completion]
+    E --> F[SAC / SHC / committee]
+    F --> G[Authorised decision]
+    G --> H[Final application status]
+```
+
+## 🎬 Demo accounts & scenarios
 
 The synthetic seed portfolio contains 25 applications across all five regions, with stage histories, varied outcomes and deadlines, EVC visits, review observations, document-validity states and compliance records. Institution names and workflow records are fictional demo data, not official AICTE records.
 
@@ -144,8 +251,16 @@ demo1234
 
 These are local prototype credentials only. Do not reuse the shared demo password for real accounts or deployments.
 
-### Try the end-to-end flows
+### SIH demo run-through
+1. Sign in as `institution@nexora-demo.in` and show the institution's scoped application list. Submit a small demo application if you want to show the submission flow.
+2. Sign out and sign in as the South regional officer, `regional@nexora-demo.in`. Open an application in the South region, review its timeline, and forward or return it with a clear reason.
+3. If you returned an application, sign back in as the owning institution and resubmit it. Then show the updated timeline and notification.
+4. For an EVC example without changing the new application through every stage, use the seeded `APP-2026-0003`: demonstrate its EVC scheduling stage as Bureau Officer, then show EVC findings as `evc@nexora-demo.in`.
+5. Finish with the dashboard, audit trail and `/aicte-data`. Explain that dashboard workflow records are synthetic demo data and live public data is not connected unless its authorized source is configured.
 
+Before presenting, reset the local demo data if you changed seeded records, confirm the frontend and backend are both running, and practise signing in/out between roles. Do not claim that OCR approves or authenticates documents, or that NEXORA is an official AICTE service.
+
+### Try the end-to-end flows
 1. **Submit an application:** Sign in as Institution → Applications → New application → submit. Follow the new record in the application list and detail timeline.
 2. **Review a deficiency:** Open `APP-2026-0002` as the institution to resubmit a returned case, or sign in as an authorized officer to return a case with a required reason.
 3. **Schedule and complete an EVC:** Sign in as Bureau Officer to schedule `APP-2026-0003`; sign in as EVC / Committee to record findings and a recommendation.
@@ -153,9 +268,10 @@ These are local prototype credentials only. Do not reuse the shared demo passwor
 5. **Review a lease renewal:** Sign in as Institution → Lease Management → open an expired lease and submit renewal evidence where available.
 6. **Run an overdue check:** Sign in as Administrator → User Management → Run deadline monitor. Review resulting notifications and overdue records.
 
-> “Reset demo data” replaces local application records and users with the fictional seed data. Use it only when you are comfortable losing the current local demo records.
+> [!TIP]
+> "Reset demo data" replaces local application records and users with the fictional seed data. Use it only when you are comfortable losing the current local demo records.
 
-## Run locally
+## 🐳 Run locally
 
 ### Run the complete stack with Docker Compose
 
@@ -169,7 +285,6 @@ Docker Compose starts the production-mode API, PostgreSQL, and frontend behind o
 For a remote deployment, run the same stack on a server with a persistent Docker host, configure a strong private secret file, set `NEXORA_PORT` and `CORS_ORIGINS` for the public hostname, and put HTTPS/reverse-proxy protection in front of it. Do not expose PostgreSQL directly. This prototype is not certified for real AICTE decisions or sensitive institutional records.
 
 ### Requirements
-
 - Python **3.12** recommended for the pinned backend dependency set.
 - Node.js and npm.
 - PowerShell on Windows (commands below use Windows paths).
@@ -207,11 +322,13 @@ npm run dev
 
 Open `http://localhost:5173`. In development, the frontend sends API requests to the same-origin `/api` path and Vite proxies them to `http://127.0.0.1:8000`. This also supports a forwarded development URL without browser cross-origin login failures.
 
-### Registration and first login
+> [!NOTE]
+> If port `5173` is already in use, Vite automatically picks the next free port (e.g. `5174`). Use the URL printed in the terminal.
 
+### Registration and first login
 Public institution registration creates an **inactive** account that cannot sign in until an administrator activates it in User Management. For a quick local walkthrough, use one of the seeded demo accounts above.
 
-## Configuration
+## ⚙️ Configuration
 
 Copy the example files before local development:
 
@@ -226,6 +343,8 @@ Copy the example files before local development:
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access-token lifetime; defaults to 480 minutes. |
 | `CORS_ORIGINS` | Comma-separated allowed browser origins for the API. |
 | `APP_ENV` | Set to `production` to disable interactive API documentation. |
+| `AI_CHAT_API_KEY` | Optional provider API key for open-ended assistant replies. Set only in `backend/.env`; never expose it in the frontend or commit it. When enabled, chat messages go to the OpenAI-compatible endpoint. |
+| `AI_CHAT_MODEL` | Chat model name; defaults to `gpt-4o-mini`. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Optional email delivery configuration. Without SMTP, notifications remain in-app. |
 | `AICTE_OGD_API_KEY` | Server-only API key issued by the Open Government Data platform for an authorized public dataset. |
 | `AICTE_OGD_RESOURCE_ID` | UUID resource ID for an AICTE dataset whose publisher and access terms have been verified. |
@@ -236,7 +355,7 @@ Copy the example files before local development:
 
 The local database and uploaded files are created under `backend/`. Local `.env` files, databases, uploads, virtual environments and frontend build output are excluded from Git.
 
-### Public AICTE data integration
+## 📡 Public AICTE data integration
 
 The `/aicte-data` screen is a dedicated public-data view. It reads only from the backend's public institution cache and displays source attribution, API availability, and last successful synchronization. The backend adapter uses the documented Open Government Data API resource endpoint; it does not call private AICTE portal endpoints, scrape dashboard pages, or infer internal application status.
 
@@ -248,7 +367,7 @@ AICTE ONOD/Approved Institutions Dashboard access did not provide a documented p
 
 The Approval Process Handbook 2024–2027 is a published policy reference, not a live API. NEXORA's configurable example workflow and reminder rules have not been treated as handbook-derived official rules; do not use them as official compliance requirements.
 
-## Project structure
+## 🗂️ Project structure & screens
 
 ```text
 backend/
@@ -269,6 +388,29 @@ frontend/
   vite.config.ts   Development server and same-origin API proxy
 ```
 
+### API domains
+
+All routes are mounted under `/api`. Explore the live, interactive reference at `http://localhost:8000/docs` (development only).
+
+| Router | Prefix | Responsibility |
+|---|---|---|
+| auth | `/api/auth` | Sign-in, public institution registration, current session |
+| users | `/api/users` | User list, roles, activation, regional assignment |
+| admin | `/api/admin` | User management, workflow config, deadline monitor, demo reset |
+| applications | `/api/applications` | Application CRUD, stage transitions, observations, search/export |
+| documents | `/api/documents` | Upload, review, authenticated downloads, expiry status |
+| compliance | `/api/compliance` | Undertakings, evidence, deadlines, verification |
+| lease | `/api/lease` | Lease expiry and renewal tracking |
+| evc | `/api/evc` | EVC scheduling, committee, findings, recommendations |
+| workflow | `/api/workflow` | Configurable example workflow stages and rules |
+| dashboard | `/api/dashboard` | Executive KPIs, charts, deadlines, recent work |
+| notifications | `/api/notifications` | In-app notifications and read status |
+| reports | `/api/reports` | Filtered CSV reports (pendency, EVC, compliance, etc.) |
+| audit | `/api/audit-logs` | Audit history |
+| aicte-data | `/api/aicte-data` | Public institution cache, source health, sync |
+| assistant | `/api/assistant` | Optional OpenAI-compatible chat replies |
+| (root) | `/api/health` | Liveness check |
+
 ### Main screens
 
 | Route | Screen |
@@ -286,7 +428,7 @@ frontend/
 | `/users`, `/workflow`, `/audit` | Restricted administration and audit tools |
 | `/help` | Roles, safeguards and guided scenarios |
 
-## Security and limitations
+## 🔒 Security and limitations
 
 Security controls are included for this prototype, but they do **not** make it production-certified or ready for real institutional records.
 
@@ -304,7 +446,7 @@ Security controls are included for this prototype, but they do **not** make it p
 
 The requirements and dependency pins were reviewed in prior project work. Re-run dependency vulnerability checks when dependencies change and before any deployment; a past scan is not a guarantee of current safety.
 
-## Useful commands
+## 🛠️ Useful commands
 
 Run from `frontend/`:
 
@@ -313,6 +455,14 @@ npm run dev       # Start the Vite development server
 npm run build     # Type-check and create the production frontend bundle
 npm run preview   # Serve the production bundle locally
 ```
+
+Run the backend workflow tests from `backend/`:
+
+```powershell
+.\venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+The tests use an isolated in-memory SQLite database and do not modify the demo database.
 
 Run from the repository root:
 
@@ -326,6 +476,6 @@ git diff --check
 
 **NEXORA AICTE · A fictional approval and compliance workflow prototype**
 
-Designed for clear, accountable, role-aware operations.
+Designed for clear, accountable, role-aware operations. ⚖️
 
 </div>

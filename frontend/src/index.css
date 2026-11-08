@@ -59,7 +59,7 @@ button { cursor: pointer; }
 input:not([type='checkbox']):not([type='radio']),
 select,
 textarea {
-  border-color: var(--border-color);
+  border: 1px solid var(--border-color);
   border-radius: 9px;
   color: var(--text-primary);
   background-color: var(--bg-surface);
@@ -98,6 +98,15 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .page-title {
   font-family: Inter, 'Segoe UI', system-ui, sans-serif;
   letter-spacing: -.035em;
+}
+
+@keyframes agent-icon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.agent-icon-float:not(.agent-icon-static) {
+  animation: agent-icon-float 2.4s ease-in-out infinite;
 }
 
 :root[data-theme='dark'] .bg-white {

@@ -6,6 +6,8 @@ import { apiGet } from '../api/client';
 
 type Institution = { id: number; name: string; region: string };
 
+const formControlClass = 'mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400';
+
 export default function Register() {
   const { register, user } = useAuth();
   const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -42,10 +44,10 @@ export default function Register() {
           <>
             <p className="mt-2 text-sm text-slate-500">Share your institutional details to request access.</p>
             <form onSubmit={submit} className="mt-7 space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-              <label className="block text-[11px] font-semibold text-slate-700">Full name<input required minLength={2} value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} className="mt-1.5 h-10 w-full px-3 text-xs" /></label>
-              <label className="block text-[11px] font-semibold text-slate-700">Work email<input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} className="mt-1.5 h-10 w-full px-3 text-xs" /></label>
-              <label className="block text-[11px] font-semibold text-slate-700">Password<input required minLength={8} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className="mt-1.5 h-10 w-full px-3 text-xs" /></label>
-              <label className="block text-[11px] font-semibold text-slate-700">Institution<select required value={form.institution_id} onChange={(event) => setForm({ ...form, institution_id: Number(event.target.value) })} className="mt-1.5 h-10 w-full px-3 text-xs"><option value={0} disabled>Select an institution</option>{institutions.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.region}</option>)}</select></label>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Full name<input required minLength={2} value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} placeholder="e.g. Ananya Sharma" autoComplete="name" className={formControlClass} /></label>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Work email<input required type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} placeholder="name@institution.edu" autoComplete="email" className={formControlClass} /></label>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Password<input required minLength={8} type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder="At least 8 characters" autoComplete="new-password" className={formControlClass} /></label>
+              <label className="block text-[11px] font-semibold text-slate-700 dark:text-slate-200">Institution<select required value={form.institution_id} onChange={(event) => setForm({ ...form, institution_id: Number(event.target.value) })} className={formControlClass}><option value={0} disabled>Select your institution</option>{institutions.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.region}</option>)}</select></label>
               {error && <p role="alert" className="rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs text-rose-700">{error}</p>}
               <button disabled={busy} className="h-10 w-full rounded-lg bg-brand-blue text-xs font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50">{busy ? 'Submitting request…' : 'Submit access request'}</button>
               <p className="text-center text-[10px] text-slate-400">Access remains pending until administrator verification.</p>
