@@ -6,7 +6,7 @@ import { apiDownload, apiGet, apiPost } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 type DocumentItem = { id: number; application_id: string | null; category: string; file_name: string; status: string; expiry_date: string | null; file_size: number; ocr_text?: string | null; ocr_summary?: string | null };
-const categories = ['Lease Documents', 'Land and Building Documents', 'Institutional Undertakings', 'Approval Supporting Documents', 'Compliance Evidence', 'Other Prescribed Documents'];
+const categories = ['Annexure-2', 'Lease Documents', 'Land and Building Documents', 'Institutional Undertakings', 'Approval Supporting Documents', 'Compliance Evidence', 'Other Prescribed Documents'];
 const documentStatCards: { label: string; key: 'total' | 'pending' | 'verified' | 'expired'; icon: LucideIcon; style: string }[] = [
   { label: 'Documents in view', key: 'total', icon: FileText, style: 'text-brand-blue bg-blue-50' },
   { label: 'Awaiting verification', key: 'pending', icon: AlertCircle, style: 'text-amber-700 bg-amber-50' },

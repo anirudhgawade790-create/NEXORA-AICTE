@@ -4,11 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.deps import get_current_user, require_roles
-from app.models import Institution, Undertakings, User
-from app.schemas.compliance import ComplianceCreate, ComplianceVerifyRequest
+from app.deps import check_application_access, get_current_user, require_roles
+from app.models import (
+    Application, DeficiencyCompliance, Documents, Institution, ScrutinyObservations,
+    Undertakings, User,
+)
+from app.schemas.compliance import (
+    ComplianceCreate, ComplianceVerifyRequest, DeficiencyComplianceReview,
+    DeficiencyComplianceSubmit,
+)
 from app.services.audit import log_action
 from app.services.notifications_service import create_notification
+from app.services.workflow_engine import latest_deficiency_compliance
 
 router = APIRouter(prefix="/api/compliance", tags=["compliance"])
 
@@ -22,6 +29,117 @@ def serialize(item: Undertakings) -> dict:
         "days_remaining": remaining, "submitted_at": item.submitted_at,
         "evidence_document_id": item.evidence_document_id, "remarks": item.remarks,
     }
+
+
+def serialize_deficiency_submission(item: DeficiencyCompliance) -> dict:
+    return {
+        "id": item.id,
+        "observation_id": item.observation_id,
+        "application_id": item.application_id,
+        "evidence_document_id": item.evidence_document_id,
+        "submitted_by": item.submitted_by,
+        "submitted_at": item.submitted_at,
+        "status": item.status,
+        "reviewed_by": item.reviewed_by,
+        "reviewed_at": item.reviewed_at,
+        "remarks": item.remarks,
+    }
+
+
+@router.post(
+    "/applications/{application_id}/deficiencies/{observation_id}/submissions",
+    status_code=201,
+)
+def submit_deficiency_compliance(
+    application_id: str,
+    observation_id: int,
+    payload: DeficiencyComplianceSubmit,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("institution")),
+):
+    application = db.query(Application).filter_by(id=application_id).first()
+    if application is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+    check_application_access(user, application)
+    if application.status != "returned":
+        raise HTTPException(status_code=409, detail="The application must be returned for compliance before evidence is submitted")
+    observation = db.query(ScrutinyObservations).filter_by(
+        id=observation_id, application_id=application.id, is_deficiency=True
+    ).first()
+    if observation is None:
+        raise HTTPException(status_code=404, detail="Deficiency observation not found for this application")
+    previous = latest_deficiency_compliance(db, observation.id)
+    if previous and previous.status == "verified":
+        raise HTTPException(status_code=409, detail="This deficiency has already been verified")
+    document = db.query(Documents).filter_by(
+        id=payload.evidence_document_id,
+        application_id=application.id,
+        institution_id=user.institution_id,
+        category="Compliance Evidence",
+    ).first()
+    if document is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Attach a Compliance Evidence document to this application before submitting it against the deficiency.",
+        )
+    item = DeficiencyCompliance(
+        observation_id=observation.id,
+        application_id=application.id,
+        institution_id=user.institution_id,
+        evidence_document_id=document.id,
+        submitted_by=user.id,
+        status="pending",
+    )
+    db.add(item)
+    db.flush()
+    log_action(
+        db, user, "deficiency_compliance_submitted", "deficiency_compliance",
+        item.id, previous.status if previous else None, "pending",
+        f"Evidence submitted for observation {observation.id}", application.current_stage,
+    )
+    db.commit()
+    db.refresh(item)
+    return serialize_deficiency_submission(item)
+
+
+@router.post("/deficiency-submissions/{submission_id}/review")
+def review_deficiency_compliance(
+    submission_id: int,
+    payload: DeficiencyComplianceReview,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles("regional_officer", "bureau_officer", "admin")),
+):
+    item = db.query(DeficiencyCompliance).filter_by(id=submission_id).first()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Deficiency compliance submission not found")
+    application = db.query(Application).filter_by(id=item.application_id).first()
+    if application is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+    check_application_access(user, application)
+    latest = latest_deficiency_compliance(db, item.observation_id)
+    if latest is None or latest.id != item.id or item.status != "pending":
+        raise HTTPException(status_code=409, detail="Only the latest pending evidence submission can be reviewed")
+    previous = item.status
+    item.status = payload.status
+    item.reviewed_by = user.id
+    item.reviewed_at = datetime.utcnow()
+    item.remarks = payload.remarks.strip()
+    log_action(
+        db, user, "deficiency_compliance_reviewed", "deficiency_compliance",
+        item.id, previous, item.status, item.remarks, application.current_stage,
+    )
+    institution_user = db.query(User).filter_by(
+        institution_id=item.institution_id, role="institution", is_active=True
+    ).first()
+    if institution_user:
+        create_notification(
+            db, "deficiency_compliance_reviewed", item.id, institution_user.id,
+            f"Compliance evidence for a deficiency was marked {item.status}: {item.remarks}",
+            action_link=f"/applications/{application.id}",
+        )
+    db.commit()
+    db.refresh(item)
+    return serialize_deficiency_submission(item)
 
 
 @router.post("", status_code=201)

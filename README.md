@@ -97,7 +97,7 @@ Use these **local prototype credentials only**. More role-specific accounts and 
 
 NEXORA brings the main steps of an institutional approval and compliance journey into one responsive workspace. Institutions can submit applications and supporting evidence; officers can review records and move them through configurable stages; EVC committees can coordinate visits and submit findings; administrators can manage access and prototype workflow settings.
 
-The interface uses a responsive navy-and-blue design with clear record states, data visualizations and role-aware navigation. Dashboard metrics and operational records come from the backend rather than presentation-only hardcoded totals.
+The interface uses a responsive enterprise design with a deep-navy navigation rail, teal/cyan accents, warm neutral workspace surfaces and distinct KPI card treatments. Dashboard metrics and operational records come from the backend rather than presentation-only hardcoded totals. Light and dark themes, responsive navigation and accessible state colors are supported.
 
 **A typical journey:** an institution submits a case → an authorized officer reviews it → an EVC visit can be coordinated → the configured workflow records progress and outcome. Each account sees the records and actions allowed for its role.
 
@@ -132,8 +132,8 @@ flowchart TB
 ## 📦 What is included
 
 ### Workspace and analytics
-- Role-aware navigation, collapsible desktop sidebar, mobile drawer, breadcrumbs, global application search, profile menu and notification count.
-- NEXORA prototype dashboard with application KPIs, status and regional charts, monthly trends, workflow stages, compliance progress, and a priority queue for overdue and upcoming work.
+- Role-aware navigation, collapsible dark desktop sidebar, mobile drawer, breadcrumbs, global application search, profile menu and notification count.
+- NEXORA prototype dashboard with visually differentiated KPI cards, status and regional charts, monthly trends, workflow stages, compliance progress, and a priority queue for overdue and upcoming work.
 - Separate Live AICTE Data Dashboard for public institution/approval data; it never merges official public data with prototype application records.
 - Application search, filters, sorting, pagination and CSV export.
 - Reports for application pendency, regional performance, EVC appointments, compliance, document validity, overdue actions and decisions.
@@ -218,7 +218,31 @@ Authorized users can advance a case according to its configured stage rules. Off
 
 The stage names, deadlines, reminder intervals and escalation settings are prototype configuration examples. They are **not official AICTE rules or statutory timelines**.
 
-When creating a demo application, choose an illustrative route: **Only Scrutiny**, **Scrutiny + EVC**, **EVC + SAC/SHC**, **Scrutiny + EVC + SAC/SHC**, or **Only EVC**. The selected route is saved with the application and determines which configured stages are traversed. These are SIH demonstration paths, not an automatic determination of an institution's official APH route.
+When creating an application, choose a source-backed **APH 2024–2027** category to use its category route and processing window. The separate **Demo-only example route** preserves the illustrative paths (**Only Scrutiny**, **Scrutiny + EVC**, **EVC + SAC/SHC**, **Scrutiny + EVC + SAC/SHC**, or **Only EVC**) and is not an APH determination.
+
+### APH 2024–2027 implementation scope
+
+The rules below are mapped from the [official AICTE Approval Process Handbook 2024–2027](https://aicte.gov.in/sites/default/files/APH%20Final.pdf), principally Clauses 1.8, 1.9, 2.5–2.7, 2.21, 2.24, 2.25, and Tables 2.2–2.3. Each APH application stores its source URL, handbook period, rule category, clause references, required documents, mandatory/conditional steps, processing window, and effective status.
+
+| APH category | NEXORA route / requirements | Processing window |
+|---|---|---|
+| EoA based on self-disclosure | Application → Self-Disclosure → Processing; Annexure-2; no standard Scrutiny, EVC, or SAC/SHC stage | As per AICTE Public Notice |
+| Increase in intake / additional courses | Annexure-2; mandatory Scrutiny and EVC; SAC/SHC is conditional on previous processing outcome; Clause 2.6 Engineering & Technology minimum is captured as an applicant assertion | As per AICTE Public Notice |
+| New programme / level | Annexure-2; mandatory Scrutiny and EVC; conditional SAC/SHC; Clause 2.7 directs new courses under the programme to Clause 2.6 | As per AICTE Public Notice |
+| Change of institution name | Annexure-2; Scrutiny; no standard EVC | As per AICTE Public Notice |
+| Merger | Annexure-2; Scrutiny and EVC; conditional SAC/SHC; Table 2.2 scope is same campus/city | As per AICTE Public Notice |
+| Change of site/location | Annexure-2; Scrutiny and EVC; conditional SAC/SHC; campus shifting is noted as during vacation time | Year-round |
+| Closure of institution | Annexure-2; Scrutiny; no standard EVC; no TER charges under Clause 2.21 | Year-round |
+| Other supported Table 2.2 categories | Change of bank details, trust/society/company name, closure of programme/course | Year-round |
+| ODL / Online learning | Annexure-2; Table 2.3 route metadata | Year-round; processed twice a year as per UGC timeline |
+
+APH routes never use the legacy configurable per-stage day counts: Category 1 shows **As per AICTE Public Notice**, Category 2 shows **Year-round**, and ODL/Online adds the UGC twice-yearly cadence. The handbook does not specify a fixed number of processing days in these table entries.
+
+Scrutiny and EVC steps keep the Clause 1.8/1.9 constraints visible. Deficiency observations are tied to the stage that raised them; institutions attach Compliance Evidence to each deficiency; reviewers preserve every submission, review outcome, timestamp, and audit entry. Evidence upload alone cannot resolve a deficiency or decide an application. Re-Scrutiny is routed only for identified deficiencies. SAC/SHC is not auto-inserted: an authorized NEXORA reviewer must record a reasoned referral after the applicable prior step.
+
+Clause 2.24 eligibility is modelled as one NEXORA appeal entry within seven days of a recorded Executive Committee decision upload. Clause 2.25 decisions must be backed by an uploaded external order/letter and an authority/reference; the API records that external outcome and audits it rather than creating one.
+
+**Prototype boundary:** NEXORA does not connect to the AICTE portal, send applications/compliance/appeals, select AICTE committee members, issue notices, decide eligibility, grant approval, or notify the SAC/SHC/Council. Applicant-supplied course counts, decision references, and uploaded files are not independently verified with AICTE. The implementation is a limited workflow mapping for the cited provisions, not a claim of full APH compliance; other APH clauses, annexures, exceptions, fees, and academic-calendar rules are not comprehensively implemented.
 
 The scheduled monitor also escalates overdue undertakings/compliance submissions and expired documents to configured regional, bureau and administrator roles. In-app alerts are always recorded; when SMTP is configured, new alerts are also emailed to their recipients. Email delivery requires the same `SMTP_HOST` and sender/authentication settings described below.
 
@@ -371,6 +395,8 @@ The local database and uploaded files are created under `backend/`. Local `.env`
 ## 📡 Public AICTE data integration
 
 The `/aicte-data` screen is a dedicated public-data view. It reads only from the backend's public institution cache and displays source attribution, API availability, and last successful synchronization. The backend adapter uses the documented Open Government Data API resource endpoint; it does not call private AICTE portal endpoints, scrape dashboard pages, or infer internal application status.
+
+The Year-wise AICTE Approved Government Engineering Institutes dataset (2019–20 through 2021–22) contains yearly institute and approved-seat totals, not individual institution records. When configured as this source, NEXORA displays those figures as historical aggregates and does not present them as a current or complete AICTE institution list.
 
 No verified AICTE dataset resource ID or public API contract was available during this integration. Therefore the source stays **not configured** by default and the live dashboard intentionally contains no institution rows until a dataset is verified and configured. Obtain the API key and resource ID through the official dataset/API process, then set the server-side variables in `backend/.env`; never put the key in frontend code. The dataset page URL must be an official HTTPS page, and the publisher/access confirmation must be explicitly enabled. The scheduled job syncs immediately on startup and then at the configured interval; an administrator can also request a manual sync.
 

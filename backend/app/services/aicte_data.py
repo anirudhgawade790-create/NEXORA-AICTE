@@ -70,6 +70,47 @@ def normalize_records(records: list[dict], synchronized_at: datetime) -> list[di
     for raw in records:
         if not isinstance(raw, dict):
             continue
+        academic_year = _first_value(
+            raw, ("academic_year", "academic_session", "approval_year")
+        )
+        institute_count = _first_value(
+            raw,
+            (
+                "number_of_government_engineering_institutes",
+                "government_engineering_institutes",
+            ),
+        )
+        approved_seats = _first_value(
+            raw,
+            (
+                "approved_seats_in_government_engineering_institutes",
+                "government_engineering_institute_approved_seats",
+            ),
+        )
+        if academic_year is not None and institute_count is not None and approved_seats is not None:
+            item = {
+                "record_type": "aggregate",
+                "aicte_id": None,
+                "name": "Government Engineering Institutes (aggregate)",
+                "state": None,
+                "district": None,
+                "city": None,
+                "address": None,
+                "approved_courses": [],
+                "approval_status": None,
+                "academic_year": str(academic_year).strip(),
+                "source_updated_at": _first_value(
+                    raw, ("updated_at", "last_updated", "data_updated_at")
+                ),
+                "government_engineering_institutes_count": institute_count,
+                "approved_seats_count": approved_seats,
+                "synchronized_at": synchronized_at.isoformat(),
+            }
+            record_key = hashlib.sha256(
+                json.dumps(raw, sort_keys=True, default=str).encode("utf-8")
+            ).hexdigest()
+            grouped[record_key] = item
+            continue
         aicte_id = _first_value(
             raw, ("aicte_id", "aicteid", "institute_id", "institution_id", "permanent_id")
         )
@@ -82,6 +123,7 @@ def normalize_records(records: list[dict], synchronized_at: datetime) -> list[di
         key_source = aicte_id or json.dumps(raw, sort_keys=True, default=str)
         record_key = hashlib.sha256(key_source.encode("utf-8")).hexdigest()
         item = grouped.setdefault(record_key, {
+            "record_type": "institution",
             "aicte_id": aicte_id,
             "name": str(name).strip(),
             "state": _first_value(raw, ("state", "state_name")),
@@ -92,9 +134,7 @@ def normalize_records(records: list[dict], synchronized_at: datetime) -> list[di
             "approval_status": _first_value(
                 raw, ("approval_status", "approval", "status_of_approval", "status")
             ),
-            "academic_year": _first_value(
-                raw, ("academic_year", "academic_session", "approval_year")
-            ),
+            "academic_year": academic_year,
             "source_updated_at": _first_value(
                 raw, ("updated_at", "last_updated", "data_updated_at")
             ),

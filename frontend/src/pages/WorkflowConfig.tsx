@@ -3,9 +3,11 @@ import { useEffect, useState } from 'react';
 import { apiDelete, apiGet, apiPost, apiPut } from '../api/client';
 
 type Rule = { stage_key: string; stage_name: string; stage_order: number; requires_scrutiny: boolean; requires_evc: boolean; requires_committee: boolean; deadline_days: number | null; allowed_roles: string; is_active: boolean };
+type AphRule = { key: string; label: string; rule_category: string; clauses: string[]; mandatory_steps: string[]; conditional_steps: string[]; required_documents: string[]; processing_timeline: string; source_document: string; process_notes: string[]; ter_charges: string; scope_notes: string[] };
 type Config = { values: number[] };
 export default function WorkflowConfig() {
   const [rules, setRules] = useState<Rule[]>([]);
+  const [aphRules, setAphRules] = useState<AphRule[]>([]);
   const [intervals, setIntervals] = useState<number[]>([]);
   const [escalation, setEscalation] = useState('{"levels":[1,2,3],"intervals":[7,14,30],"targets":{}}');
   const [category, setCategory] = useState('');
@@ -13,11 +15,12 @@ export default function WorkflowConfig() {
   const [error, setError] = useState('');
   async function load() {
     try {
-      const [r, reminder, cats] = await Promise.all([
+      const [r, reminder, cats, aph] = await Promise.all([
         apiGet<Rule[]>('/workflow/rules'), apiGet<{ intervals: number[] }>('/admin/reminder-intervals'),
         apiGet<{ id: number; name: string }[]>('/admin/document-categories'),
+        apiGet<AphRule[]>('/workflow/aph-rules'),
       ]);
-      setRules(r); setIntervals(reminder.intervals); setCategories(cats);
+      setRules(r); setIntervals(reminder.intervals); setCategories(cats); setAphRules(aph);
       const config = await apiGet<Record<string, unknown>>('/admin/escalation-config');
       setEscalation(JSON.stringify(config, null, 2));
     } catch (err) { setError(err instanceof Error ? err.message : 'Unable to load configuration'); }
@@ -42,14 +45,28 @@ export default function WorkflowConfig() {
   }
   return <div className="space-y-6">
     <header><p className="text-[11px] font-bold uppercase tracking-[.13em] text-brand-blue">Administration · Example rules</p><h1 className="page-title mt-1 text-2xl font-bold text-brand-navy md:text-[28px]">Workflow configuration</h1><p className="mt-1 text-sm text-slate-500">Manage example workflow stages, reminders and document categories.</p></header>
-    <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-950"><AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-700" />Stages, deadlines, escalation levels and reminder windows are prototype examples and are not official AICTE regulatory requirements.</p>
+    <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-950"><AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-700" />APH category routing and clause references below are based on the 2024-2027 handbook. Legacy stage-day values, reminder windows and escalation settings are prototype controls; APH processing windows do not use those day values.</p>
     {error && <p role="alert" className="rounded-xl border border-rose-100 bg-rose-50 p-3 text-xs text-rose-700">{error}</p>}
     <section className="enterprise-card overflow-hidden">
       <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-brand-blue"><GitBranch size={18} /></span><div><h2 className="text-sm font-bold text-slate-800">Workflow stages</h2><p className="mt-0.5 text-[10px] text-slate-500">Configure requirements and deadlines for each stage.</p></div></div>
       <div className="divide-y divide-slate-100">{rules.map((rule) => <article key={rule.stage_key} className="grid gap-4 p-4 md:grid-cols-[minmax(160px,1fr)_repeat(3,auto)_auto] md:items-center">
         <div><b className="text-xs text-slate-800">{rule.stage_order}. {rule.stage_name}</b><p className="mt-1 text-[10px] text-slate-500">{rule.stage_key} · roles: {rule.allowed_roles}</p></div>
         {(['requires_scrutiny', 'requires_evc', 'requires_committee'] as const).map((field) => <label key={field} className="flex items-center gap-2 text-[10px] capitalize text-slate-600"><input type="checkbox" checked={rule[field]} onChange={(e) => setRules(rules.map((item) => item.stage_key === rule.stage_key ? { ...item, [field]: e.target.checked } : item))} className="h-4 w-4 accent-blue-600" />{field.replace('requires_', '')}</label>)}
-        <div className="flex items-center gap-2"><label className="text-[10px] text-slate-500">Days<input aria-label="Deadline days" type="number" min="0" value={rule.deadline_days ?? ''} onChange={(e) => setRules(rules.map((item) => item.stage_key === rule.stage_key ? { ...item, deadline_days: e.target.value ? Number(e.target.value) : null } : item))} className="mt-1 block h-9 w-20 px-2 text-xs" /></label><button onClick={() => saveRule(rule)} className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-navy px-3 text-[10px] font-semibold text-white transition hover:bg-blue-900"><Save size={13} />Save</button></div>
+        <div className="flex items-center gap-2"><label className="text-[10px] text-slate-500">Legacy demo days<input aria-label="Legacy demo deadline days" type="number" min="0" value={rule.deadline_days ?? ''} onChange={(e) => setRules(rules.map((item) => item.stage_key === rule.stage_key ? { ...item, deadline_days: e.target.value ? Number(e.target.value) : null } : item))} className="mt-1 block h-9 w-24 px-2 text-xs" /></label><button onClick={() => saveRule(rule)} className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg bg-brand-navy px-3 text-[10px] font-semibold text-white transition hover:bg-blue-900"><Save size={13} />Save</button></div>
+      </article>)}</div>
+    </section>
+    <section className="enterprise-card overflow-hidden">
+      <div className="border-b border-slate-100 px-5 py-4"><h2 className="text-sm font-bold text-slate-800">APH category rules · 2024-2027</h2><p className="mt-1 text-[10px] text-slate-500">Read-only, source-backed category metadata. NEXORA does not implement AICTE portal selection, notifications, or decision issuance.</p></div>
+      <div className="divide-y divide-slate-100">{aphRules.map((item) => <article key={item.key} className="space-y-1 p-4">
+        <h3 className="text-xs font-bold text-slate-800">{item.label} · {item.rule_category.replace('_', ' ')}</h3>
+        <p className="text-[10px] text-slate-600">Clauses: {item.clauses.join(', ')} · Required: {item.required_documents.join(', ')}</p>
+        <p className="text-[10px] text-slate-600">Processing: {item.processing_timeline}</p>
+        {item.scope_notes.map((note) => <p key={note} className="text-[10px] text-slate-600">Scope: {note}</p>)}
+        {item.mandatory_steps.length > 0 && <p className="text-[10px] text-slate-600">Mandatory: {item.mandatory_steps.join(', ')}</p>}
+        {item.conditional_steps.length > 0 && <p className="text-[10px] text-slate-600">Conditional: {item.conditional_steps.join(', ')}</p>}
+        <p className="text-[10px] text-slate-600">TER charges: {item.ter_charges === 'no_TER_charges' ? 'No TER charges for closure (APH Clause 2.21)' : item.ter_charges.replace(/_/g, ' ')}</p>
+        <ul className="list-disc pl-4 text-[10px] text-slate-500">{item.process_notes.map((note) => <li key={note}>{note}</li>)}</ul>
+        <a href={item.source_document} target="_blank" rel="noreferrer" className="inline-block text-[10px] font-semibold text-brand-blue underline">Open official APH</a>
       </article>)}</div>
     </section>
     <section className="grid gap-4 xl:grid-cols-2">

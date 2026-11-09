@@ -91,10 +91,14 @@ def complete(appointment_id: int, payload: EVCCompletion, db: Session = Depends(
     item.findings = payload.findings
     item.recommendation = payload.recommendation
     db.commit()
-    if application.current_stage == "evc_scheduling":
-        transition(db, application, "forward", user, payload.findings)
-    if application.current_stage == "evc_completion":
-        transition(db, application, "complete", user, payload.recommendation)
+    if application.aph_rule_key:
+        if application.current_stage == "evc_scheduling":
+            transition(db, application, "forward", user, payload.findings)
+    else:
+        if application.current_stage == "evc_scheduling":
+            transition(db, application, "forward", user, payload.findings)
+        if application.current_stage == "evc_completion":
+            transition(db, application, "complete", user, payload.recommendation)
     log_action(db, user, "evc_completed", "evc_appointment", item.id,
                "scheduled", "completed", payload.findings, application.current_stage)
     institution_user = db.query(User).filter_by(

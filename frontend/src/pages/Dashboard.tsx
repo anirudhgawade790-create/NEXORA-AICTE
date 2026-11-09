@@ -29,7 +29,7 @@ type ApplicationRow = {
 };
 type ComplianceQueueItem = { id: number; description: string; due_date: string; status: string; application_id: string | null };
 
-const chartColors = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#7c3aed', '#0891b2'];
+const chartColors = ['#0f8f91', '#138a72', '#d99932', '#c85c62', '#8065ad', '#4895a8'];
 const cardIcons = [FileBarChart2, Clock3, SearchIcon, CalendarClock, ShieldAlert, FileCheck2, AlertTriangle, CheckCircle2];
 const cardAccents = [
   'bg-blue-50 text-blue-700', 'bg-amber-50 text-amber-700', 'bg-violet-50 text-violet-700',
@@ -362,32 +362,32 @@ export default function Dashboard() {
 
           <ChartCard tourId="regional-chart" title="Regional pendency" note="Applications currently in process by region">
             <ResponsiveContainer width="100%" height="100%"><BarChart data={data.regionPendency} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-              <CartesianGrid vertical={false} stroke="#eef2f7" />
+              <CartesianGrid vertical={false} stroke="#e8eeeb" />
               <XAxis dataKey="region" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
               <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="value" name="Applications" fill="#2563eb" radius={[5, 5, 0, 0]} maxBarSize={38} />
+              <Bar dataKey="value" name="Applications" fill="#0f8f91" radius={[7, 7, 0, 0]} maxBarSize={38} />
             </BarChart></ResponsiveContainer>
           </ChartCard>
 
           <ChartCard tourId="monthly-chart" title="Monthly application trends" note="New submissions across recent months">
             <ResponsiveContainer width="100%" height="100%"><AreaChart data={data.monthlyTrend} margin={{ top: 10, right: 8, left: -20, bottom: 0 }}>
-              <defs><linearGradient id="submissionFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2563eb" stopOpacity={0.22} /><stop offset="95%" stopColor="#2563eb" stopOpacity={0.01} /></linearGradient></defs>
-              <CartesianGrid vertical={false} stroke="#eef2f7" />
+              <defs><linearGradient id="submissionFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0f8f91" stopOpacity={0.25} /><stop offset="95%" stopColor="#0f8f91" stopOpacity={0.01} /></linearGradient></defs>
+              <CartesianGrid vertical={false} stroke="#e8eeeb" />
               <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 9, fill: '#64748b' }} />
               <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Area type="monotone" dataKey="applications" name="Submissions" stroke="#2563eb" strokeWidth={2.5} fill="url(#submissionFill)" />
+              <Area type="monotone" dataKey="applications" name="Submissions" stroke="#0f8f91" strokeWidth={2.5} fill="url(#submissionFill)" />
             </AreaChart></ResponsiveContainer>
           </ChartCard>
 
           <ChartCard tourId="workflow-chart" title="Workflow stage distribution" note="Applications across the approval lifecycle">
             <ResponsiveContainer width="100%" height="100%"><BarChart layout="vertical" data={data.stageDistribution} margin={{ top: 0, right: 16, left: 18, bottom: 0 }}>
-              <CartesianGrid horizontal={false} stroke="#eef2f7" />
+              <CartesianGrid horizontal={false} stroke="#e8eeeb" />
               <XAxis type="number" allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#94a3b8' }} />
               <YAxis type="category" dataKey="name" width={104} tickLine={false} axisLine={false} tick={{ fontSize: 9, fill: '#64748b' }} tickFormatter={formatStage} />
               <Tooltip contentStyle={tooltipStyle} labelFormatter={(value) => formatStage(String(value))} />
-              <Bar dataKey="value" name="Applications" fill="#102a56" radius={[0, 5, 5, 0]} maxBarSize={17} />
+              <Bar dataKey="value" name="Applications" fill="#183a57" radius={[0, 6, 6, 0]} maxBarSize={17} />
             </BarChart></ResponsiveContainer>
           </ChartCard>
 

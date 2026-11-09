@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.aph_rules import APH_RULES, public_rule
 from app.database import get_db
 from app.deps import get_current_user, require_admin
 from app.models import User, WorkflowRules
@@ -36,6 +37,11 @@ def list_paths(user: User = Depends(get_current_user)):
         }
         for key, path in WORKFLOW_PATHS.items()
     ]
+
+
+@router.get("/aph-rules")
+def list_aph_rules(user: User = Depends(get_current_user)):
+    return [public_rule(key, rule) for key, rule in APH_RULES.items()]
 
 
 @router.post("/suggest")

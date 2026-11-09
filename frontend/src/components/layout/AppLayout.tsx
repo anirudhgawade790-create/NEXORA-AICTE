@@ -113,7 +113,7 @@ export default function AppLayout() {
               to={to}
               title={collapsed && !mobile ? label : undefined}
               onClick={() => setMobileNavOpen(false)}
-              className={({ isActive }) => `group flex min-h-10 items-center gap-3 rounded-lg px-3 text-[13px] font-medium transition-colors ${collapsed && !mobile ? 'justify-center px-2' : ''} ${isActive ? 'bg-blue-50 text-brand-blue' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'}`}
+              className={({ isActive }) => `workspace-nav-link group flex min-h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition-colors ${collapsed && !mobile ? 'justify-center px-2' : ''} ${isActive ? 'is-active' : ''}`}
             >
               <span className="relative flex h-5 w-5 shrink-0 items-center justify-center">
                 <Icon size={17} strokeWidth={1.8} />
@@ -127,28 +127,28 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-surface text-slate-800">
-      <aside className={`fixed inset-y-0 left-0 z-30 hidden flex-col border-r border-slate-200/80 bg-white transition-[width] duration-200 md:flex ${collapsed ? 'w-[76px]' : 'w-[256px]'}`}>
-        <Link to="/dashboard" className={`flex h-[76px] items-center border-b border-slate-100 ${collapsed ? 'justify-center px-3' : 'gap-3 px-5'}`}>
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-navy text-white shadow-sm">
+    <div className="workspace-frame min-h-screen text-slate-800">
+      <aside className={`workspace-sidebar fixed inset-y-0 left-0 z-30 hidden flex-col transition-[width] duration-200 md:flex ${collapsed ? 'w-[76px]' : 'w-[256px]'}`}>
+        <Link to="/dashboard" className={`workspace-brand flex h-[82px] items-center ${collapsed ? 'justify-center px-3' : 'gap-3 px-5'}`}>
+          <span className="workspace-mark flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-sm">
             <Landmark size={21} strokeWidth={1.8} />
           </span>
-          {!collapsed && <span className="min-w-0"><span className="block text-[15px] font-bold tracking-tight text-brand-navy">NEXORA <span className="font-medium">AICTE</span></span><span className="mt-0.5 block text-[10px] font-medium text-slate-500">Approval &amp; Compliance Intelligence</span></span>}
+          {!collapsed && <span className="min-w-0"><span className="workspace-brand-title block text-[15px] font-bold tracking-tight">NEXORA <span className="font-medium">AICTE</span></span><span className="workspace-brand-subtitle mt-0.5 block text-[10px] font-medium">Approval &amp; Compliance Intelligence</span></span>}
         </Link>
         <div className="flex-1 overflow-y-auto px-3 py-5">{renderNavigation()}</div>
-        <div className="border-t border-slate-100 p-3">
-          <div className={`mb-3 flex items-center rounded-xl bg-slate-50 p-2 ${collapsed ? 'justify-center' : 'gap-3'}`}>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-brand-navy">{user?.full_name.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span>
-            {!collapsed && <span className="min-w-0"><span className="block truncate text-xs font-semibold">{user?.full_name}</span><span className="block truncate text-[10px] capitalize text-slate-500">{roleTitle(user?.role)}</span></span>}
+        <div className="workspace-profile-wrap p-3">
+          <div className={`workspace-profile mb-3 flex items-center rounded-xl p-2 ${collapsed ? 'justify-center' : 'gap-3'}`}>
+            <span className="workspace-avatar flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold">{user?.full_name.split(' ').map((part) => part[0]).slice(0, 2).join('')}</span>
+            {!collapsed && <span className="min-w-0"><span className="workspace-profile-name block truncate text-xs font-semibold">{user?.full_name}</span><span className="workspace-profile-role block truncate text-[10px]">{roleTitle(user?.role)}</span></span>}
           </div>
-          <button onClick={() => setCollapsed((value) => !value)} className="flex h-9 w-full items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <button onClick={() => setCollapsed((value) => !value)} className="workspace-collapse flex h-9 w-full items-center justify-center rounded-lg transition" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
             {collapsed ? <ChevronRight size={17} /> : <span className="flex items-center gap-2 text-xs"><ChevronLeft size={16} />Collapse sidebar</span>}
           </button>
         </div>
       </aside>
 
       <div className={`min-h-screen transition-[padding] duration-200 ${collapsed ? 'md:pl-[76px]' : 'md:pl-[256px]'}`}>
-        <header className="sticky top-0 z-20 flex h-[68px] items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur md:px-8">
+        <header className="workspace-topbar sticky top-0 z-20 flex h-[68px] items-center justify-between px-4 backdrop-blur md:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <button onClick={() => setMobileNavOpen(true)} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 md:hidden" aria-label="Open navigation"><Menu size={20} /></button>
             <Link to="/dashboard" className="flex items-center gap-2 md:hidden">
@@ -156,7 +156,7 @@ export default function AppLayout() {
               <span className="text-sm font-bold text-brand-navy">NEXORA <span className="font-medium">AICTE</span></span>
             </Link>
             <div className="hidden items-center gap-2 text-xs sm:flex">
-              <span className="text-slate-400">Workspace</span><span className="text-slate-300">/</span><span className="font-semibold text-slate-700">{currentLabel}</span>
+              <span className="workspace-breadcrumb-muted">Workspace</span><span className="workspace-breadcrumb-separator">/</span><span className="workspace-breadcrumb-current font-semibold">{currentLabel}</span>
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-3">
@@ -195,18 +195,18 @@ export default function AppLayout() {
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-[1680px] px-4 py-6 md:px-8 md:py-8"><Outlet /></main>
+        <main className="workspace-content mx-auto max-w-[1680px] px-4 py-6 md:px-8 md:py-8"><Outlet /></main>
       </div>
 
       {mobileNavOpen && <>
         <button className="fixed inset-0 z-40 bg-slate-950/40 md:hidden" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" />
-        <aside className="fixed inset-y-0 left-0 z-50 flex w-[min(84vw,300px)] flex-col border-r border-slate-200 bg-white shadow-xl md:hidden">
-          <div className="flex h-[68px] items-center justify-between border-b border-slate-100 px-4">
-            <Link to="/dashboard" onClick={() => setMobileNavOpen(false)} className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-navy text-white"><Landmark size={19} /></span><span><b className="block text-sm text-brand-navy">NEXORA AICTE</b><span className="text-[10px] text-slate-500">Approval &amp; Compliance Intelligence</span></span></Link>
-            <button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
+        <aside className="workspace-sidebar fixed inset-y-0 left-0 z-50 flex w-[min(84vw,300px)] flex-col shadow-xl md:hidden">
+          <div className="workspace-brand flex h-[68px] items-center justify-between px-4">
+            <Link to="/dashboard" onClick={() => setMobileNavOpen(false)} className="flex items-center gap-3"><span className="workspace-mark flex h-9 w-9 items-center justify-center rounded-lg text-white"><Landmark size={19} /></span><span><b className="workspace-brand-title block text-sm">NEXORA AICTE</b><span className="workspace-brand-subtitle text-[10px]">Approval &amp; Compliance Intelligence</span></span></Link>
+            <button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" className="workspace-collapse rounded-lg p-2"><X size={18} /></button>
           </div>
           <div className="flex-1 overflow-y-auto px-3 py-5">{renderNavigation(true)}</div>
-          <div className="border-t border-slate-100 p-4 text-[10px] text-slate-500">Fictional demo environment · v1.0</div>
+          <div className="workspace-mobile-footer border-t p-4 text-[10px]">Fictional demo environment · v1.0</div>
         </aside>
       </>}
     </div>

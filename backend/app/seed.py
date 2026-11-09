@@ -15,6 +15,7 @@ REGIONS = ["North", "South", "East", "West", "Central"]
 # Reference document categories (a DocumentCategory table is added in a later
 # phase; for now these are the canonical category strings).
 DOCUMENT_CATEGORIES = [
+    "Annexure-2",
     "Lease Documents",
     "Land and Building Documents",
     "Institutional Undertakings",
@@ -48,6 +49,10 @@ def seed_demo_data(db: Session) -> None:
          "bureau_officer,admin", 15),
         ("final_status", "Final Application Status", 8, False, False, False,
          "bureau_officer,admin", None),
+        ("self_disclosure", "Self-Disclosure", 9, False, False, False,
+         "institution", None),
+        ("processing", "Processing", 10, False, False, False,
+         "regional_officer,bureau_officer,admin", None),
     ]
     for stage_key, stage_name, order, req_s, req_e, req_c, roles, days in workflow_rules:
         existing_rule = db.query(models.WorkflowRules).filter_by(stage_key=stage_key).first()

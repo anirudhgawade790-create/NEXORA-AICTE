@@ -2,7 +2,7 @@
 
 from collections.abc import Generator
 
-from sqlalchemy import Integer, String, create_engine, inspect
+from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Text, create_engine, inspect
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.config import settings
@@ -47,6 +47,15 @@ def init_db() -> None:
         column["name"] for column in inspect(engine).get_columns("escalations")
     }
     string_type = String(64).compile(dialect=engine.dialect)
+    application_migrations = {
+        "aph_rule_key": String(64).compile(dialect=engine.dialect),
+        "aph_rule_metadata": JSON().compile(dialect=engine.dialect),
+        "committee_referral": f"{Boolean().compile(dialect=engine.dialect)} NOT NULL DEFAULT false",
+        "decision_at": DateTime().compile(dialect=engine.dialect),
+        "decision_authority": String(50).compile(dialect=engine.dialect),
+        "decision_reference": Text().compile(dialect=engine.dialect),
+        "decision_document_id": Integer().compile(dialect=engine.dialect),
+    }
     with engine.begin() as connection:
         if "workflow_path" not in application_columns:
             workflow_type = String(50).compile(dialect=engine.dialect)
@@ -54,6 +63,11 @@ def init_db() -> None:
                 "ALTER TABLE applications ADD COLUMN workflow_path "
                 f"{workflow_type} NOT NULL DEFAULT 'scrutiny_evc_sac_shc'"
             )
+        for column_name, column_type in application_migrations.items():
+            if column_name not in application_columns:
+                connection.exec_driver_sql(
+                    f"ALTER TABLE applications ADD COLUMN {column_name} {column_type}"
+                )
         if "record_type" not in escalation_columns:
             connection.exec_driver_sql(
                 f"ALTER TABLE escalations ADD COLUMN record_type {String(30).compile(dialect=engine.dialect)}"
@@ -61,6 +75,15 @@ def init_db() -> None:
         if "record_id" not in escalation_columns:
             connection.exec_driver_sql(
                 f"ALTER TABLE escalations ADD COLUMN record_id {string_type}"
+            )
+    observation_columns = {
+        column["name"] for column in inspect(engine).get_columns("scrutiny_observations")
+    }
+    if "workflow_stage" not in observation_columns:
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "ALTER TABLE scrutiny_observations ADD COLUMN workflow_stage "
+                f"{String(50).compile(dialect=engine.dialect)}"
             )
     user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
     if "token_version" not in user_columns:

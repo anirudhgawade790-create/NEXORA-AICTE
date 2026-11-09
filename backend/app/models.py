@@ -90,6 +90,13 @@ class Application(Base):
     region = Column(String(50), index=True, nullable=False)
     application_type = Column(String(100), nullable=False)
     workflow_path = Column(String(50), nullable=False, default="scrutiny_evc_sac_shc")
+    aph_rule_key = Column(String(64), nullable=True)
+    aph_rule_metadata = Column(JSON, nullable=True)
+    committee_referral = Column(Boolean, default=False, nullable=False)
+    decision_at = Column(DateTime, nullable=True)
+    decision_authority = Column(String(50), nullable=True)
+    decision_reference = Column(Text, nullable=True)
+    decision_document_id = Column(Integer, ForeignKey("documents.id"), nullable=True)
     submitted_at = Column(DateTime, index=True, nullable=False, default=func.now())
     current_stage = Column(String(50), nullable=False)
     status = Column(String(50), index=True, nullable=False)
@@ -121,6 +128,19 @@ class ApplicationStage(Base):
     )
 
 
+class ApplicationAppeal(Base):
+    __tablename__ = "application_appeals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(
+        String(32), ForeignKey("applications.id"), unique=True, index=True, nullable=False
+    )
+    reason = Column(Text, nullable=False)
+    submitted_at = Column(DateTime, nullable=False, default=func.now())
+    status = Column(String(40), nullable=False, default="recorded_for_sac")
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+
 class WorkflowRules(Base):
     __tablename__ = "workflow_rules"
 
@@ -147,7 +167,34 @@ class ScrutinyObservations(Base):
     observation_text = Column(Text, nullable=False)
     is_deficiency = Column(Boolean, default=False, nullable=False)
     severity = Column(String(20), nullable=False, default="low")
+    workflow_stage = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=func.now(), nullable=False)
+
+
+class DeficiencyCompliance(Base):
+    __tablename__ = "deficiency_compliance"
+
+    id = Column(Integer, primary_key=True, index=True)
+    observation_id = Column(
+        Integer, ForeignKey("scrutiny_observations.id"), index=True, nullable=False
+    )
+    application_id = Column(String(32), ForeignKey("applications.id"), index=True, nullable=False)
+    institution_id = Column(Integer, ForeignKey("institutions.id"), index=True, nullable=False)
+    evidence_document_id = Column(Integer, ForeignKey("documents.id"), nullable=False)
+    submitted_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    submitted_at = Column(DateTime, nullable=False, default=func.now())
+    status = Column(String(20), nullable=False, default="pending")
+    reviewed_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    remarks = Column(Text, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=func.now())
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending','verified','deficient')",
+            name="ck_deficiency_compliance_status",
+        ),
+    )
 
 
 class Documents(Base):
