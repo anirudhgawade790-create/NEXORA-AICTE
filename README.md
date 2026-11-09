@@ -59,6 +59,7 @@ Open `http://localhost:5173` and sign in with `admin@nexora-demo.in` / `demo1234
 | **Documents & compliance** | Upload evidence, review status, follow deadlines and monitor lease renewals. |
 | **EVC operations** | Coordinate visits, committee assignments, findings and recommendations. |
 | **Insights & accountability** | View role-scoped dashboards, reports, notifications and audit history. |
+| **APH workflow reference** | Choose supported Approval Process Handbook 2024–2027 categories for a documented, prototype-only route. |
 
 Built with **React + TypeScript**, **FastAPI** and **SQLAlchemy**. The app includes a public product landing page, sign-in and institution access requests, a role-aware workspace, and a help assistant available across pages.
 
@@ -97,7 +98,17 @@ Use these **local prototype credentials only**. More role-specific accounts and 
 
 NEXORA brings the main steps of an institutional approval and compliance journey into one responsive workspace. Institutions can submit applications and supporting evidence; officers can review records and move them through configurable stages; EVC committees can coordinate visits and submit findings; administrators can manage access and prototype workflow settings.
 
-The interface uses a responsive enterprise design with a deep-navy navigation rail, teal/cyan accents, warm neutral workspace surfaces and distinct KPI card treatments. Dashboard metrics and operational records come from the backend rather than presentation-only hardcoded totals. Light and dark themes, responsive navigation and accessible state colors are supported.
+The interface uses a responsive enterprise design with a deep-navy navigation rail, teal/cyan accents, warm neutral workspace surfaces and differentiated KPI cards. Dashboard metrics and operational records come from the backend rather than presentation-only hardcoded totals. Light and dark themes, responsive navigation and accessible state colors are supported.
+
+### Interface at a glance
+
+- **Public entry:** product overview, application journey, team roles and a clear sign-in path.
+- **Workspace shell:** collapsible dark-navy navigation, grouped pages, active-route marker, sticky breadcrumb/search/notification bar, profile menu and theme toggle.
+- **Dashboard:** role-scoped KPI cards, application status, regional pendency, monthly submissions, workflow stages, compliance progress, upcoming/overdue action queue and recent applications.
+- **Application detail:** route-specific timeline, supporting documents, scrutiny/compliance history and authorized workflow actions.
+- **Responsive behavior:** desktop sidebar collapses; smaller screens use a navigation drawer and horizontally scrollable data tables where needed.
+
+The interface is an operational view of the NEXORA prototype; visual status indicators and dashboard counts are not AICTE decisions or official data unless a source is explicitly identified.
 
 **A typical journey:** an institution submits a case → an authorized officer reviews it → an EVC visit can be coordinated → the configured workflow records progress and outcome. Each account sees the records and actions allowed for its role.
 
@@ -159,8 +170,9 @@ flowchart TB
 
 ### Visual design and usability
 - Responsive layouts for desktop, laptop, tablet and mobile.
-- Consistent navy, royal blue, white and soft off-white styling.
-- Lucide iconography, Recharts analytics, accessible form labels, visible focus states and reduced-motion support.
+- Deep-navy navigation with teal/cyan primary accents, warm neutral workspace surfaces, and amber/rose/emerald status colors.
+- Distinct KPI-card accents, Recharts analytics, Lucide iconography, accessible form labels, visible focus states and reduced-motion support.
+- Light and dark themes, with persistent theme selection.
 - Clear empty, error and loading states across operational pages.
 
 ## 🤖 AI and automation scope
@@ -442,6 +454,7 @@ All routes are mounted under `/api`. Explore the live, interactive reference at 
 | lease | `/api/lease` | Lease expiry and renewal tracking |
 | evc | `/api/evc` | EVC scheduling, committee, findings, recommendations |
 | workflow | `/api/workflow` | Configurable example workflow stages/rules and application-type route suggestions (`GET /paths`, `POST /suggest`) |
+| workflow | `/api/workflow/aph-rules` | Authenticated APH 2024–2027 rule catalogue used by the prototype |
 | dashboard | `/api/dashboard` | Executive KPIs, charts, deadlines, recent work |
 | notifications | `/api/notifications` | In-app notifications and read status |
 | reports | `/api/reports` | Filtered CSV reports (pendency, EVC queue/visit delays and escalation levels, compliance, etc.) |

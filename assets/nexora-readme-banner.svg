@@ -5,22 +5,22 @@
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#08152d"/>
       <stop offset=".58" stop-color="#102a56"/>
-      <stop offset="1" stop-color="#174b88"/>
+      <stop offset="1" stop-color="#125c69"/>
     </linearGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#5eead4"/>
-      <stop offset="1" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#32b8b2"/>
     </linearGradient>
     <radialGradient id="glow">
-      <stop offset="0" stop-color="#60a5fa" stop-opacity=".26"/>
-      <stop offset="1" stop-color="#60a5fa" stop-opacity="0"/>
+      <stop offset="0" stop-color="#32b8b2" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#32b8b2" stop-opacity="0"/>
     </radialGradient>
   </defs>
 
   <rect width="1200" height="360" rx="28" fill="url(#background)"/>
   <circle cx="1035" cy="96" r="220" fill="url(#glow)"/>
-  <circle cx="1150" cy="350" r="200" fill="none" stroke="#bfdbfe" stroke-opacity=".09" stroke-width="1.5"/>
-  <circle cx="1150" cy="350" r="154" fill="none" stroke="#bfdbfe" stroke-opacity=".09" stroke-width="1.5"/>
+  <circle cx="1150" cy="350" r="200" fill="none" stroke="#a5f3e7" stroke-opacity=".11" stroke-width="1.5"/>
+  <circle cx="1150" cy="350" r="154" fill="none" stroke="#a5f3e7" stroke-opacity=".11" stroke-width="1.5"/>
   <path d="M715 0h485v360H840c74-69 99-150 64-226C872 65 812 22 715 0Z" fill="#ffffff" fill-opacity=".025"/>
 
   <g transform="translate(72 68)">
@@ -38,10 +38,10 @@
     <circle cx="16" cy="15" r="4" fill="#5eead4"/>
     <text x="29" y="19" fill="#e0f2fe">ROLE-AWARE WORKSPACE</text>
     <rect x="158" width="126" height="30" rx="15" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".16"/>
-    <circle cx="174" cy="15" r="4" fill="#93c5fd"/>
+    <circle cx="174" cy="15" r="4" fill="#32b8b2"/>
     <text x="187" y="19" fill="#e0f2fe">AUDITABLE FLOW</text>
     <rect x="296" width="118" height="30" rx="15" fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".16"/>
-    <circle cx="312" cy="15" r="4" fill="#c4b5fd"/>
+    <circle cx="312" cy="15" r="4" fill="#f3c46b"/>
     <text x="325" y="19" fill="#e0f2fe">DEMO PROTOTYPE</text>
   </g>
 
@@ -50,13 +50,13 @@
     <path d="M34 70h280" stroke="#bfdbfe" stroke-opacity=".38" stroke-width="2"/>
     <path d="M34 70h168" stroke="url(#accent)" stroke-width="2.5"/>
     <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="11" text-anchor="middle">
-      <circle cx="34" cy="70" r="14" fill="#2563eb" stroke="#93c5fd" stroke-width="2"/>
+      <circle cx="34" cy="70" r="14" fill="#0f8f91" stroke="#5eead4" stroke-width="2"/>
       <path d="m28 70 4 4 8-9" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      <circle cx="127" cy="70" r="14" fill="#2563eb" stroke="#93c5fd" stroke-width="2"/>
+      <circle cx="127" cy="70" r="14" fill="#0f8f91" stroke="#5eead4" stroke-width="2"/>
       <path d="m121 70 4 4 8-9" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      <circle cx="220" cy="70" r="14" fill="#102a56" stroke="#bfdbfe" stroke-opacity=".65" stroke-width="2"/>
+      <circle cx="220" cy="70" r="14" fill="#102a56" stroke="#9be9df" stroke-opacity=".8" stroke-width="2"/>
       <text x="220" y="74" fill="#dbeafe" font-size="10">3</text>
-      <circle cx="314" cy="70" r="14" fill="#102a56" stroke="#bfdbfe" stroke-opacity=".65" stroke-width="2"/>
+      <circle cx="314" cy="70" r="14" fill="#102a56" stroke="#9be9df" stroke-opacity=".8" stroke-width="2"/>
       <text x="314" y="74" fill="#dbeafe" font-size="10">4</text>
       <text x="34" y="105" fill="#e0f2fe">Submit</text>
       <text x="127" y="105" fill="#e0f2fe">Review</text>
@@ -64,7 +64,7 @@
       <text x="314" y="105" fill="#bfdbfe">Decide</text>
     </g>
     <rect x="0" y="145" width="348" height="70" rx="16" fill="#ffffff" fill-opacity=".07" stroke="#ffffff" stroke-opacity=".13"/>
-    <rect x="18" y="163" width="34" height="34" rx="11" fill="#60a5fa" fill-opacity=".18"/>
+    <rect x="18" y="163" width="34" height="34" rx="11" fill="#32b8b2" fill-opacity=".2"/>
     <path d="M27 187v-11l8-6 8 6v11h-6v-7h-5v7Z" fill="none" stroke="#bfdbfe" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
     <text x="68" y="174" fill="#ffffff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="13" font-weight="700">Built for every team</text>
     <text x="68" y="192" fill="#bfdbfe" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="11">Institutions · Officers · Committees · Admins</text>
