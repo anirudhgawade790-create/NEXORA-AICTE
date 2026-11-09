@@ -17,9 +17,6 @@
 
 </div>
 
-> [!IMPORTANT]
-> **NEXORA is a fictional workflow prototype — not an official AICTE product and not connected to AICTE systems.** All seeded institutions and applications are demo records. Do not use this project for official regulatory or approval decisions.
-
 ---
 
 ## 🚀 Quick start
