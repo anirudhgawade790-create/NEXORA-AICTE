@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
+    FRONTEND_BASE_URL: str = "http://localhost:5173"
 
     @field_validator("APP_ENV")
     @classmethod

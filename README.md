@@ -343,9 +343,10 @@ Copy the example files before local development:
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Access-token lifetime; defaults to 480 minutes. |
 | `CORS_ORIGINS` | Comma-separated allowed browser origins for the API. |
 | `APP_ENV` | Set to `production` to disable interactive API documentation. |
+| `FRONTEND_BASE_URL` | Public frontend origin used to build password-reset links (defaults to `http://localhost:5173`). |
 | `AI_CHAT_API_KEY` | Optional provider API key for open-ended assistant replies. Set only in `backend/.env`; never expose it in the frontend or commit it. When enabled, chat messages go to the OpenAI-compatible endpoint. |
 | `AI_CHAT_MODEL` | Chat model name; defaults to `gpt-4o-mini`. |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Optional email delivery configuration. Without SMTP, notifications remain in-app. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | SMTP for password recovery and optional email notifications. Password reset requires `SMTP_HOST` and `SMTP_FROM` (or `SMTP_USER`). Port 587 uses STARTTLS; port 465 uses implicit TLS. |
 | `AICTE_OGD_API_KEY` | Server-only API key issued by the Open Government Data platform for an authorized public dataset. |
 | `AICTE_OGD_RESOURCE_ID` | UUID resource ID for an AICTE dataset whose publisher and access terms have been verified. |
 | `AICTE_DATASET_PAGE_URL` | Official dataset information page shown as the source in the dashboard. |
@@ -394,7 +395,7 @@ All routes are mounted under `/api`. Explore the live, interactive reference at 
 
 | Router | Prefix | Responsibility |
 |---|---|---|
-| auth | `/api/auth` | Sign-in, public institution registration, current session |
+| auth | `/api/auth` | Sign-in, institution registration, forgot/reset password, current session |
 | users | `/api/users` | User list, roles, activation, regional assignment |
 | admin | `/api/admin` | User management, workflow config, deadline monitor, demo reset |
 | applications | `/api/applications` | Application CRUD, stage transitions, observations, search/export |
@@ -416,6 +417,7 @@ All routes are mounted under `/api`. Explore the live, interactive reference at 
 | Route | Screen |
 |---|---|
 | `/login`, `/register` | Sign-in and institution access request |
+| `/forgot-password`, `/reset-password` | Email-based password recovery (requires SMTP configuration) |
 | `/dashboard` | Executive KPIs, charts, deadlines and recent applications |
 | `/aicte-data` | Public AICTE institution records, source health and sync freshness |
 | `/applications`, `/applications/new`, `/applications/:id` | Search, submit and manage application records |
@@ -435,7 +437,8 @@ Security controls are included for this prototype, but they do **not** make it p
 - Passwords are stored as hashes; sessions use signed bearer tokens with a required environment-supplied JWT secret.
 - API endpoints enforce authentication, role checks and institution/region/application record scope; inactive users cannot authenticate.
 - Public registration is restricted to institution accounts and requires administrator activation before login.
-- Login and registration have per-IP application-level rate limits. Multi-worker or production deployments also need shared gateway-level limits.
+- Login (10/minute), registration (5/hour), password-reset requests (3/hour), password updates (5/hour) and assistant chat (10/minute) have per-IP application-level rate limits. Password recovery sends a single-use link that expires after 30 minutes; links are stored hashed and SMTP must be configured. Multi-worker or production deployments also need shared gateway-level limits.
+- A successful password reset invalidates existing bearer sessions for that account; sign in again using the new password.
 - Request bodies use validation schemas in the API. File uploads accept PDF/JPG/JPEG/PNG, enforce a 10 MB limit, and use authenticated, authorized download routes.
 - Security response headers include content-security policy, clickjacking and MIME-sniffing defenses, referrer and permissions policies; HSTS is sent over HTTPS.
 - CSV exports neutralize spreadsheet formula prefixes in data cells.

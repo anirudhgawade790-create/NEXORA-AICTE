@@ -28,6 +28,8 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
     if user is None:
         raise HTTPException(status_code=401, detail="User is inactive or no longer exists")
+    if payload.get("ver", 0) != user.token_version:
+        raise HTTPException(status_code=401, detail="Session has been revoked. Please sign in again.")
     return user
 
 

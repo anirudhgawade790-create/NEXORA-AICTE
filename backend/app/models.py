@@ -32,6 +32,7 @@ class User(Base):
     region = Column(String(50), nullable=True)
     institution_id = Column(Integer, ForeignKey("institutions.id"), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
+    token_version = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
 
     __table_args__ = (
@@ -40,6 +41,17 @@ class User(Base):
             name="ck_users_role",
         ),
     )
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    token_hash = Column(String(64), unique=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=func.now(), nullable=False)
 
 
 class Institution(Base):

@@ -90,7 +90,7 @@ export default function Login() {
             </label>
             <div className="flex items-center justify-between">
               <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600"><input type="checkbox" checked={rememberEmail} onChange={(event) => setRememberEmail(event.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-blue-600" />Remember email</label>
-              <Link to="/help" className="text-xs font-semibold text-brand-blue hover:underline">Need help signing in?</Link>
+              <Link to="/forgot-password" className="text-xs font-semibold text-brand-blue hover:underline">Forgot password?</Link>
             </div>
             {error && <p role="alert" className="rounded-lg border border-rose-100 bg-rose-50 p-3 text-xs text-rose-700">{error}</p>}
             <button disabled={busy} className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand-blue px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60">{busy ? 'Signing in…' : 'Sign in securely'}{!busy && <ArrowRight size={16} />}</button>

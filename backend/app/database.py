@@ -2,7 +2,7 @@
 
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import Integer, create_engine, inspect
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.config import settings
@@ -40,6 +40,13 @@ def init_db() -> None:
     from app.seed import seed_demo_data
 
     Base.metadata.create_all(bind=engine)
+    user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
+    if "token_version" not in user_columns:
+        integer_type = Integer().compile(dialect=engine.dialect)
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                f"ALTER TABLE users ADD COLUMN token_version {integer_type} NOT NULL DEFAULT 0"
+            )
     db = SessionLocal()
     try:
         has_demo_account = db.query(User).filter_by(

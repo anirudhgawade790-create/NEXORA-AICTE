@@ -8,6 +8,8 @@ import { ThemeProvider } from './theme/ThemeContext';
 
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Landing = lazy(() => import('./pages/Landing'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const LiveAICTEData = lazy(() => import('./pages/LiveAICTEData'));
@@ -44,6 +46,8 @@ function AppRoutes() {
         <Route path="/" element={<Page><Landing /></Page>} />
         <Route path="/login" element={<Page><Login /></Page>} />
         <Route path="/register" element={<Page><Register /></Page>} />
+        <Route path="/forgot-password" element={<Page><ForgotPassword /></Page>} />
+        <Route path="/reset-password" element={<Page><ResetPassword /></Page>} />
         <Route element={<Protected><AppLayout /></Protected>}>
           <Route path="dashboard" element={<Page><Dashboard /></Page>} />
           <Route path="aicte-data" element={<Page><LiveAICTEData /></Page>} />

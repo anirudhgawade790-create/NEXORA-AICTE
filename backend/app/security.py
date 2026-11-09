@@ -18,12 +18,18 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(*, subject, role: str, expires_minutes: int | None = None) -> str:
-    """Create a signed JWT carrying the user id (sub) and role."""
+def create_access_token(
+    *,
+    subject,
+    role: str,
+    token_version: int = 0,
+    expires_minutes: int | None = None,
+) -> str:
+    """Create a signed JWT carrying the user id, role and revocation version."""
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=expires_minutes if expires_minutes is not None else settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
-    payload = {"sub": str(subject), "role": role, "exp": expire}
+    payload = {"sub": str(subject), "role": role, "ver": token_version, "exp": expire}
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALG)
 
 
