@@ -5,21 +5,16 @@ import { apiGet, apiPost } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 type Detail = {
-  id: string; institution: string; region: string; type: string; current_stage: string; status: string;
+  id: string; institution: string; region: string; type: string; workflow_path_label: string;
+  workflow_stages: string[]; current_stage: string; status: string;
   officer: string; daysPending: number; deadline: string | null;
   timeline: { id: number; stage: string; entered_at: string; exited_at: string | null; status: string; reason: string | null; actor_user_id: number }[];
   observations: { id: number; observation_text: string; is_deficiency: boolean; created_at: string }[];
   documents: { id: number; category: string; file_name: string; status: string }[];
 };
 
-const workflowStages = ['submission', 'initial_scrutiny', 'deficiency_check', 'evc_scheduling', 'evc_completion', 'committee_stage', 'authorised_decision', 'final_status'];
-
 function formatLabel(value: string) {
   return value.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function stageIndex(stage: string) {
-  return workflowStages.indexOf(stage);
 }
 
 export default function ApplicationDetail() {
@@ -60,7 +55,7 @@ export default function ApplicationDetail() {
   if (error && !item) return <div role="alert" className="rounded-xl border border-rose-100 bg-rose-50 p-5 text-sm text-rose-700">{error}</div>;
   if (!item) return <div className="enterprise-card h-48 animate-pulse bg-slate-50" />;
   const officer = ['admin', 'regional_officer', 'bureau_officer'].includes(user?.role || '');
-  const currentIndex = stageIndex(item.current_stage);
+  const currentIndex = item.workflow_stages.indexOf(item.current_stage);
   const terminal = ['approved', 'rejected'].includes(item.status);
   const verifiedDocuments = item.documents.filter((document) => document.status === 'verified').length;
   const documentsNeedingAttention = item.documents.filter(
@@ -77,15 +72,16 @@ export default function ApplicationDetail() {
         <div><p className="text-[10px] font-bold uppercase tracking-[.13em] text-brand-blue">Application record</p><h1 className="page-title mt-1 text-2xl font-bold text-brand-navy md:text-[28px]">{item.id}</h1><p className="mt-2 flex items-center gap-2 text-sm text-slate-600"><Landmark size={15} className="text-slate-400" />{item.institution}<span className="text-slate-300">·</span>{item.region}</p></div>
         <span className={`rounded-full px-3 py-1.5 text-xs font-semibold capitalize ${item.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : item.status === 'rejected' ? 'bg-rose-50 text-rose-700' : item.status === 'returned' ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'}`}>{formatLabel(item.status)}</span>
       </div>
-      <div className="grid gap-4 border-t border-slate-100 bg-slate-50/60 px-5 py-4 sm:grid-cols-2 lg:grid-cols-4 md:px-7">
+      <div className="grid gap-4 border-t border-slate-100 bg-slate-50/60 px-5 py-4 sm:grid-cols-2 lg:grid-cols-5 md:px-7">
         <div><p className="text-[10px] text-slate-400">Application type</p><p className="mt-1 text-xs font-semibold text-slate-700">{item.type}</p></div>
+        <div><p className="text-[10px] text-slate-400">Selected example route</p><p className="mt-1 text-xs font-semibold text-slate-700">{item.workflow_path_label}</p></div>
         <div><p className="text-[10px] text-slate-400">Assigned officer</p><p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-700"><UserRound size={13} className="text-slate-400" />{item.officer}</p></div>
         <div><p className="text-[10px] text-slate-400">Days in process</p><p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-700"><Clock3 size={13} className="text-slate-400" />{item.daysPending} days</p></div>
         <div><p className="text-[10px] text-slate-400">Current deadline</p><p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-700"><CalendarClock size={13} className="text-slate-400" />{item.deadline ? new Date(item.deadline).toLocaleDateString() : 'Not set'}</p></div>
       </div>
       <div className="overflow-x-auto border-t border-slate-100 px-5 py-6 md:px-7">
         <div className="flex min-w-[690px] items-start">
-          {workflowStages.map((stage, index) => {
+          {item.workflow_stages.map((stage, index) => {
             const complete = terminal || (currentIndex >= 0 && index < currentIndex);
             const active = !terminal && index === currentIndex;
             return <div key={stage} className="relative flex flex-1 flex-col items-center text-center">

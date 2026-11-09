@@ -7,6 +7,7 @@ from app.deps import check_application_access
 from app.models import Application, ApplicationStage, User, WorkflowRules
 from app.services.audit import log_action
 from app.services.notifications_service import create_notification
+from app.workflow_paths import DEFAULT_WORKFLOW_PATH, WORKFLOW_PATHS
 
 FINAL_STATUSES = {"approved", "rejected"}
 
@@ -17,15 +18,33 @@ def ordered_rules(db: Session) -> list[WorkflowRules]:
     ).all()
 
 
-def next_rule(rules: list[WorkflowRules], current: WorkflowRules) -> WorkflowRules | None:
-    for candidate in rules:
-        if candidate.stage_order <= current.stage_order:
+def next_rule(
+    rules: list[WorkflowRules],
+    current: WorkflowRules,
+    workflow_path: str = DEFAULT_WORKFLOW_PATH,
+) -> WorkflowRules | None:
+    path = WORKFLOW_PATHS.get(workflow_path)
+    if path is None:
+        raise HTTPException(status_code=409, detail="Application workflow path is not configured")
+    stage_keys = path["stages"]
+    try:
+        current_index = stage_keys.index(current.stage_key)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Stage {current.stage_key} is not part of this application's workflow path",
+        ) from exc
+
+    active_rules = {rule.stage_key: rule for rule in rules}
+    for stage_key in stage_keys[current_index + 1:]:
+        candidate = active_rules.get(stage_key)
+        if candidate is None:
             continue
-        if candidate.stage_key in {"initial_scrutiny", "deficiency_check"} and not candidate.requires_scrutiny:
+        if stage_key in {"initial_scrutiny", "deficiency_check"} and not candidate.requires_scrutiny:
             continue
-        if candidate.stage_key in {"evc_scheduling", "evc_completion"} and not candidate.requires_evc:
+        if stage_key in {"evc_scheduling", "evc_completion"} and not candidate.requires_evc:
             continue
-        if candidate.stage_key == "committee_stage" and not candidate.requires_committee:
+        if stage_key == "committee_stage" and not candidate.requires_committee:
             continue
         return candidate
     return None
@@ -44,9 +63,19 @@ def transition(db: Session, application: Application, action: str, user: User, r
             raise HTTPException(status_code=403, detail="Only the owning institution may resubmit")
         if application.status != "returned":
             raise HTTPException(status_code=409, detail="Application is not awaiting resubmission")
-        target = next((rule for rule in ordered_rules(db) if rule.stage_key == "initial_scrutiny"), None)
+        path = WORKFLOW_PATHS.get(application.workflow_path or DEFAULT_WORKFLOW_PATH)
+        if path is None:
+            raise HTTPException(status_code=409, detail="Application workflow path is not configured")
+        first_review_stage = next(
+            (stage_key for stage_key in path["stages"] if stage_key != "submission"),
+            None,
+        )
+        target = next(
+            (rule for rule in ordered_rules(db) if rule.stage_key == first_review_stage),
+            None,
+        )
         if target is None:
-            raise HTTPException(status_code=409, detail="Initial scrutiny stage is not configured")
+            raise HTTPException(status_code=409, detail="First review stage is not configured")
         new_status = "pending"
     else:
         rules = ordered_rules(db)
@@ -65,7 +94,7 @@ def transition(db: Session, application: Application, action: str, user: User, r
         elif action == "reject":
             target, new_status = current_rule, "rejected"
         else:
-            target = next_rule(rules, current_rule)
+            target = next_rule(rules, current_rule, application.workflow_path or DEFAULT_WORKFLOW_PATH)
             if target is None:
                 target, new_status = current_rule, "approved"
             else:

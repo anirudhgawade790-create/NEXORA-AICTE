@@ -22,7 +22,8 @@ class EscalationConfig(BaseModel):
 @router.get("/config")
 def get_config(admin: User = Depends(require_admin)):
     from app.config import settings
-    return {"email_configured": bool(settings.SMTP_HOST), "email_status": "configured" if settings.SMTP_HOST else "unconfigured"}
+    configured = bool(settings.SMTP_HOST and (settings.SMTP_FROM or settings.SMTP_USER))
+    return {"email_configured": configured, "email_status": "configured" if configured else "unconfigured"}
 
 
 @router.post("/reset-demo-data")

@@ -5,11 +5,12 @@ import { apiGet, apiPost } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
 type Appointment = { id: number; application_id: string; scheduled_date: string; location: string; status: string; findings?: string };
+type EVCApplication = { id: string; current_stage: string; deadline: string | null };
 
 export default function EVCScheduling() {
   const { user } = useAuth();
   const [items, setItems] = useState<Appointment[]>([]);
-  const [apps, setApps] = useState<{ id: string; current_stage: string }[]>([]);
+  const [apps, setApps] = useState<EVCApplication[]>([]);
   const [form, setForm] = useState({ application_id: '', scheduled_date: '', location: '' });
   const [completion, setCompletion] = useState<Record<number, { findings: string; recommendation: string }>>({});
   const [view, setView] = useState<'table' | 'calendar'>('calendar');
@@ -20,7 +21,7 @@ export default function EVCScheduling() {
   async function load() {
     try {
       const [appointments, applications] = await Promise.all([
-        apiGet<Appointment[]>('/evc', filters), apiGet<{ id: string; current_stage: string }[]>('/applications'),
+        apiGet<Appointment[]>('/evc', filters), apiGet<EVCApplication[]>('/applications'),
       ]);
       setItems(appointments);
       setApps(applications.filter((item) => ['evc_scheduling', 'evc_completion'].includes(item.current_stage)));
@@ -44,6 +45,8 @@ export default function EVCScheduling() {
     scheduled: items.filter((item) => item.status === 'scheduled').length,
     completed: items.filter((item) => item.status === 'completed').length,
     queue: apps.filter((item) => item.current_stage === 'evc_scheduling').length,
+    overdueStages: apps.filter((item) => item.deadline && new Date(item.deadline) < new Date()).length,
+    overdueVisits: items.filter((item) => item.status === 'scheduled' && new Date(item.scheduled_date) < new Date()).length,
   }), [items, apps]);
   const canSchedule = ['admin', 'regional_officer', 'bureau_officer', 'evc_committee'].includes(user?.role || '');
 
@@ -51,13 +54,30 @@ export default function EVCScheduling() {
     <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[.13em] text-brand-blue">Field operations</p><h1 className="page-title mt-1 text-2xl font-bold text-brand-navy md:text-[28px]">EVC scheduling</h1><p className="mt-1 text-sm text-slate-500">Coordinate evaluation visits and record committee outcomes.</p></div><div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] text-slate-500"><CalendarDays size={15} className="text-brand-blue" />Visits &amp; inspections</div></header>
     {error && <p role="alert" className="rounded-xl border border-rose-100 bg-rose-50 p-3 text-xs text-rose-700">{error}</p>}
 
-    <section className="grid gap-3 sm:grid-cols-3">
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
       {[
         { label: 'Scheduled visits', value: counts.scheduled, icon: CalendarDays, tone: 'bg-blue-50 text-blue-700' },
         { label: 'Completed visits', value: counts.completed, icon: CheckCircle2, tone: 'bg-emerald-50 text-emerald-700' },
         { label: 'Awaiting scheduling', value: counts.queue, icon: Clock3, tone: 'bg-amber-50 text-amber-700' },
+        { label: 'Overdue EVC stages', value: counts.overdueStages, icon: Clock3, tone: 'bg-rose-50 text-rose-700' },
+        { label: 'Missed visit dates', value: counts.overdueVisits, icon: Clock3, tone: 'bg-orange-50 text-orange-700' },
       ].map((card) => <article key={card.label} className="enterprise-card flex items-center justify-between p-4"><div><p className="text-[11px] text-slate-500">{card.label}</p><p className="page-title mt-2 text-2xl font-bold text-brand-navy">{loading ? '—' : card.value}</p></div><span className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.tone}`}><card.icon size={19} /></span></article>)}
     </section>
+
+    {(counts.overdueStages > 0 || counts.overdueVisits > 0) && <section className="enterprise-card border-rose-200 p-5">
+      <h2 className="text-sm font-bold text-rose-800">EVC actions needing attention</h2>
+      <p className="mt-1 text-[10px] leading-5 text-rose-700">Overdue EVC deadlines and missed scheduled visits are escalated to configured officials. These example timelines are configurable and are not official AICTE rules.</p>
+      <ul className="mt-3 space-y-2">
+        {apps.filter((app) => app.deadline && new Date(app.deadline) < new Date()).map((app) => <li key={app.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-rose-50 px-3 py-2 text-[10px]">
+          <Link to={`/applications/${app.id}`} className="font-semibold text-brand-blue hover:underline">{app.id} · {app.current_stage.replace(/_/g, ' ')}</Link>
+          <span className="text-rose-700">Stage deadline {new Date(app.deadline!).toLocaleString()}</span>
+        </li>)}
+        {items.filter((item) => item.status === 'scheduled' && new Date(item.scheduled_date) < new Date()).map((item) => <li key={`visit-${item.id}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-orange-50 px-3 py-2 text-[10px]">
+          <span className="font-semibold text-slate-700">{item.application_id} · Scheduled visit</span>
+          <span className="text-orange-700">Visit date {new Date(item.scheduled_date).toLocaleString()}</span>
+        </li>)}
+      </ul>
+    </section>}
 
     {canSchedule && <form onSubmit={schedule} className="enterprise-card p-5">
       <div className="mb-4 flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-brand-blue"><CalendarPlus size={18} /></span><div><h2 className="text-sm font-bold text-slate-800">Schedule an evaluation visit</h2><p className="text-[10px] text-slate-500">Select an application in the EVC workflow.</p></div></div>

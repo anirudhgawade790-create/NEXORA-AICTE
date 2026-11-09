@@ -13,6 +13,7 @@ from app.schemas.applications import ApplicationCreate, ObservationRequest, Resu
 from app.services.audit import log_action
 from app.services.notifications_service import create_notification
 from app.services.workflow_engine import transition
+from app.workflow_paths import DEFAULT_WORKFLOW_PATH, WORKFLOW_PATHS
 
 router = APIRouter(prefix="/api/applications", tags=["applications"])
 
@@ -27,6 +28,15 @@ def serialize_application(db: Session, item: Application) -> dict:
         "region": item.region,
         "type": item.application_type,
         "application_type": item.application_type,
+        "workflow_path": item.workflow_path or DEFAULT_WORKFLOW_PATH,
+        "workflow_path_label": WORKFLOW_PATHS.get(
+            item.workflow_path or DEFAULT_WORKFLOW_PATH, WORKFLOW_PATHS[DEFAULT_WORKFLOW_PATH]
+        )["label"],
+        "workflow_stages": list(
+            WORKFLOW_PATHS.get(
+                item.workflow_path or DEFAULT_WORKFLOW_PATH, WORKFLOW_PATHS[DEFAULT_WORKFLOW_PATH]
+            )["stages"]
+        ),
         "submittedAt": item.submitted_at.isoformat() if item.submitted_at else None,
         "submitted_at": item.submitted_at,
         "stage": item.current_stage,
@@ -46,6 +56,8 @@ def create_application(
     db: Session = Depends(get_db),
     user: User = Depends(require_roles("institution")),
 ):
+    if payload.workflow_path not in WORKFLOW_PATHS:
+        raise HTTPException(status_code=400, detail="Choose a supported example workflow path")
     institution_id = user.institution_id
     if payload.institution_id and payload.institution_id != user.institution_id:
         raise HTTPException(status_code=403, detail="Institution users may only apply for their own institution")
@@ -65,6 +77,7 @@ def create_application(
     item = Application(
         id=app_id, institution_id=institution.id, region=institution.region,
         application_type=payload.application_type, submitted_at=now,
+        workflow_path=payload.workflow_path,
         current_stage=rule.stage_key, status="pending", assigned_officer_id=officer.id if officer else None,
         deadline=now + timedelta(days=rule.deadline_days) if rule.deadline_days else None,
         priority="Medium",

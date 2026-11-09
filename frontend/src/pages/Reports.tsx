@@ -5,7 +5,7 @@ import { apiDownload } from '../api/client';
 const reports = [
   ['applications-pendency', 'Application pendency', 'Applications in progress, workflow stage and elapsed days', FileBarChart2],
   ['region-performance', 'Regional performance', 'Processing volume and average timeline by region', BarChart3],
-  ['evc', 'EVC appointments', 'Scheduled and completed evaluation visits', Landmark],
+  ['evc', 'EVC tracking & delays', 'EVC queue deadlines, visit dates and escalation levels', Landmark],
   ['compliance', 'Compliance register', 'Institution undertakings and verification status', ShieldCheck],
   ['documents', 'Document validity', 'Supporting records and expiry information', FileCheck2],
   ['overdue', 'Overdue actions', 'Escalations and overdue application actions', BarChart3],

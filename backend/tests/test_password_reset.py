@@ -21,6 +21,7 @@ from app.models import PasswordResetToken, User
 from app.rate_limit import limiter
 from app.routers.auth import router
 from app.security import create_access_token, hash_password, verify_password
+from app.services.notifications_service import create_notification
 from app.services.password_reset_email import send_password_reset_email
 
 
@@ -201,6 +202,38 @@ class PasswordResetTests(unittest.TestCase):
             ]
         self.assertEqual([response.status_code for response in responses], [202, 202, 202, 429])
 
+    def test_forgot_password_limit_is_independent_per_email(self):
+        with patch("app.routers.auth.send_password_reset_email"):
+            first_email_responses = [
+                self.client.post(
+                    "/api/auth/forgot-password",
+                    json={"email": "first@example.com"},
+                )
+                for _ in range(3)
+            ]
+            second_email_response = self.client.post(
+                "/api/auth/forgot-password",
+                json={"email": "second@example.com"},
+            )
+            normalized_duplicate_response = self.client.post(
+                "/api/auth/forgot-password",
+                json={"email": " FIRST@example.com "},
+            )
+
+        self.assertEqual([response.status_code for response in first_email_responses], [202, 202, 202])
+        self.assertEqual(second_email_response.status_code, 202)
+        self.assertEqual(normalized_duplicate_response.status_code, 429)
+
+    def test_forgot_password_has_a_separate_per_ip_safety_cap(self):
+        response_codes = [
+            self.client.post(
+                "/api/auth/forgot-password",
+                json={"email": f"user-{index}@example.com"},
+            ).status_code
+            for index in range(21)
+        ]
+        self.assertEqual(response_codes, [202] * 20 + [429])
+
     def test_password_reset_endpoint_is_rate_limited(self):
         response_codes = [
             self.client.post(
@@ -228,6 +261,25 @@ class PasswordResetTests(unittest.TestCase):
         message = server.send_message.call_args.args[0]
         self.assertEqual(message["To"], "user@example.com")
         self.assertIn("https://nexora.example.test/reset-password?token=sample", message.get_content())
+
+    @patch("app.services.notification_email.smtplib.SMTP")
+    def test_in_app_notifications_also_send_email_when_smtp_is_configured(self, smtp):
+        with self.session_factory() as session:
+            create_notification(
+                session,
+                "compliance_overdue",
+                "undertaking:42",
+                self.user_id,
+                "A compliance requirement is overdue",
+                action_link="/compliance",
+            )
+
+        server = smtp.return_value.__enter__.return_value
+        server.starttls.assert_called_once()
+        server.send_message.assert_called_once()
+        message = server.send_message.call_args.args[0]
+        self.assertEqual(message["To"], "user@example.com")
+        self.assertIn("/compliance", message.get_content())
 
 
 if __name__ == "__main__":

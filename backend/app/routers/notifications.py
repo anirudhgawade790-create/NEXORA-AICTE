@@ -42,5 +42,6 @@ def mark_read(notification_id: int, db: Session = Depends(get_db),
 @router.get("/config")
 def notification_config(user: User = Depends(get_current_user)):
     from app.config import settings
-    return {"email_configured": bool(settings.SMTP_HOST),
-            "email_status": "configured" if settings.SMTP_HOST else "unconfigured"}
+    configured = bool(settings.SMTP_HOST and (settings.SMTP_FROM or settings.SMTP_USER))
+    return {"email_configured": configured,
+            "email_status": "configured" if configured else "unconfigured"}

@@ -18,7 +18,8 @@ from app.models import (
     User,
     WorkflowRules,
 )
-from app.services.workflow_engine import transition
+from app.services.workflow_engine import next_rule, transition
+from app.workflow_paths import suggest_workflow_path
 from fastapi import HTTPException
 
 
@@ -107,6 +108,73 @@ class WorkflowTransitionTests(unittest.TestCase):
             1,
         )
         self.assertGreater(self.session.query(Notifications).count(), 0)
+
+    def test_application_path_skips_stages_not_in_selected_route(self):
+        rules = [
+            WorkflowRules(
+                stage_key=stage_key,
+                stage_name=stage_key,
+                stage_order=order,
+                requires_scrutiny=stage_key in {"initial_scrutiny", "deficiency_check"},
+                requires_evc=stage_key in {"evc_scheduling", "evc_completion"},
+                requires_committee=stage_key == "committee_stage",
+                allowed_roles="regional_officer",
+                is_active=True,
+            )
+            for order, stage_key in enumerate(
+                [
+                    "submission", "initial_scrutiny", "deficiency_check",
+                    "evc_scheduling", "evc_completion", "committee_stage",
+                    "authorised_decision", "final_status",
+                ],
+                start=1,
+            )
+        ]
+        initial = next(rule for rule in rules if rule.stage_key == "initial_scrutiny")
+        deficiency = next(rule for rule in rules if rule.stage_key == "deficiency_check")
+        evc_completion = next(rule for rule in rules if rule.stage_key == "evc_completion")
+
+        scrutiny_only = next_rule(rules, initial, "scrutiny_only")
+        scrutiny_with_evc = next_rule(rules, initial, "scrutiny_evc")
+        full_review = next_rule(rules, initial, "scrutiny_evc_sac_shc")
+
+        self.assertEqual(scrutiny_only.stage_key, "deficiency_check")
+        self.assertEqual(scrutiny_with_evc.stage_key, "deficiency_check")
+        self.assertEqual(full_review.stage_key, "deficiency_check")
+        self.assertEqual(next_rule(rules, deficiency, "scrutiny_only").stage_key, "authorised_decision")
+        self.assertEqual(next_rule(rules, deficiency, "scrutiny_evc").stage_key, "evc_scheduling")
+        self.assertEqual(next_rule(rules, evc_completion, "scrutiny_evc").stage_key, "authorised_decision")
+        self.assertEqual(
+            next_rule(rules, evc_completion, "scrutiny_evc_sac_shc").stage_key,
+            "committee_stage",
+        )
+
+    def test_evc_only_route_starts_at_evc_after_submission(self):
+        rules = [
+            WorkflowRules(
+                stage_key=stage_key,
+                stage_name=stage_key,
+                stage_order=order,
+                requires_evc=stage_key in {"evc_scheduling", "evc_completion"},
+                allowed_roles="regional_officer",
+                is_active=True,
+            )
+            for order, stage_key in enumerate(
+                ["submission", "initial_scrutiny", "evc_scheduling", "evc_completion"],
+                start=1,
+            )
+        ]
+
+        result = next_rule(rules, rules[0], "only_evc")
+
+        self.assertEqual(result.stage_key, "evc_scheduling")
+
+    def test_application_type_suggests_an_editable_demo_route(self):
+        self.assertEqual(suggest_workflow_path("New Institution")[0], "scrutiny_evc_sac_shc")
+        self.assertEqual(suggest_workflow_path("Renewal application")[0], "scrutiny_only")
+        self.assertEqual(suggest_workflow_path("Program Expansion")[0], "scrutiny_evc")
+        self.assertEqual(suggest_workflow_path("EVC visit")[0], "only_evc")
+        self.assertEqual(suggest_workflow_path("Other category")[0], "scrutiny_evc_sac_shc")
 
     def test_return_requires_a_reason(self):
         with self.assertRaises(HTTPException) as raised:

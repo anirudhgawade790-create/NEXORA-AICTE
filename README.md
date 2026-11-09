@@ -137,6 +137,8 @@ flowchart TB
 - Separate Live AICTE Data Dashboard for public institution/approval data; it never merges official public data with prototype application records.
 - Application search, filters, sorting, pagination and CSV export.
 - Reports for application pendency, regional performance, EVC appointments, compliance, document validity, overdue actions and decisions.
+- Application-type-based suggestions for illustrative workflow routes, with an editable manual override.
+- EVC-specific upcoming-deadline reminders and overdue escalations for both EVC stage deadlines and scheduled visits.
 - AICTE public institution dashboard with source attribution, synchronization status and last-successful-sync time.
 
 ### Application and operations
@@ -216,6 +218,14 @@ Authorized users can advance a case according to its configured stage rules. Off
 
 The stage names, deadlines, reminder intervals and escalation settings are prototype configuration examples. They are **not official AICTE rules or statutory timelines**.
 
+When creating a demo application, choose an illustrative route: **Only Scrutiny**, **Scrutiny + EVC**, **EVC + SAC/SHC**, **Scrutiny + EVC + SAC/SHC**, or **Only EVC**. The selected route is saved with the application and determines which configured stages are traversed. These are SIH demonstration paths, not an automatic determination of an institution's official APH route.
+
+The scheduled monitor also escalates overdue undertakings/compliance submissions and expired documents to configured regional, bureau and administrator roles. In-app alerts are always recorded; when SMTP is configured, new alerts are also emailed to their recipients. Email delivery requires the same `SMTP_HOST` and sender/authentication settings described below.
+
+After the applicant enters an application type, the form suggests an illustrative route from common demo labels (new institution, renewal, expansion, committee, or EVC). The applicant can change the suggestion before submitting. This is a prototype heuristic, not an official APH mapping.
+
+EVC stage deadlines and scheduled visit dates get a reminder when they are within three days and a distinct overdue notification/escalation after they pass. The EVC screen shows overdue stage and visit counts, the dashboard has an **Overdue EVC Actions** KPI, and the EVC CSV includes due date, overdue days and escalation level. Example reminder and escalation intervals remain configurable prototype values—not official AICTE timelines.
+
 ```mermaid
 flowchart LR
     A[Application submission] --> B[Initial scrutiny]
@@ -256,7 +266,9 @@ These are local prototype credentials only. Do not reuse the shared demo passwor
 2. Sign out and sign in as the South regional officer, `regional@nexora-demo.in`. Open an application in the South region, review its timeline, and forward or return it with a clear reason.
 3. If you returned an application, sign back in as the owning institution and resubmit it. Then show the updated timeline and notification.
 4. For an EVC example without changing the new application through every stage, use the seeded `APP-2026-0003`: demonstrate its EVC scheduling stage as Bureau Officer, then show EVC findings as `evc@nexora-demo.in`.
-5. Finish with the dashboard, audit trail and `/aicte-data`. Explain that dashboard workflow records are synthetic demo data and live public data is not connected unless its authorized source is configured.
+5. Submit another demo application and try each example route. The selected path is saved on the record and the detail timeline shows only its applicable stages.
+6. On the EVC screen, review the overdue-stage and missed-visit indicators; use the dashboard's **Overdue EVC Actions** KPI and export the EVC report to show deadlines and escalation levels.
+7. Finish with the dashboard, audit trail and `/aicte-data`. Explain that dashboard workflow records are synthetic demo data and live public data is not connected unless its authorized source is configured.
 
 Before presenting, reset the local demo data if you changed seeded records, confirm the frontend and backend are both running, and practise signing in/out between roles. Do not claim that OCR approves or authenticates documents, or that NEXORA is an official AICTE service.
 
@@ -266,7 +278,7 @@ Before presenting, reset the local demo data if you changed seeded records, conf
 3. **Schedule and complete an EVC:** Sign in as Bureau Officer to schedule `APP-2026-0003`; sign in as EVC / Committee to record findings and a recommendation.
 4. **Submit compliance evidence:** Sign in as Institution → Compliance → open or create an undertaking → upload a document and attach it as evidence. An authorized officer can verify it or request a correction.
 5. **Review a lease renewal:** Sign in as Institution → Lease Management → open an expired lease and submit renewal evidence where available.
-6. **Run an overdue check:** Sign in as Administrator → User Management → Run deadline monitor. Review resulting notifications and overdue records.
+6. **Run an overdue check:** Sign in as Administrator → User Management → Run deadline monitor. Review application, compliance and expired-document escalations, generated notifications and the expanded overdue report.
 
 > [!TIP]
 > "Reset demo data" replaces local application records and users with the fictional seed data. Use it only when you are comfortable losing the current local demo records.
@@ -403,10 +415,10 @@ All routes are mounted under `/api`. Explore the live, interactive reference at 
 | compliance | `/api/compliance` | Undertakings, evidence, deadlines, verification |
 | lease | `/api/lease` | Lease expiry and renewal tracking |
 | evc | `/api/evc` | EVC scheduling, committee, findings, recommendations |
-| workflow | `/api/workflow` | Configurable example workflow stages and rules |
+| workflow | `/api/workflow` | Configurable example workflow stages/rules and application-type route suggestions (`GET /paths`, `POST /suggest`) |
 | dashboard | `/api/dashboard` | Executive KPIs, charts, deadlines, recent work |
 | notifications | `/api/notifications` | In-app notifications and read status |
-| reports | `/api/reports` | Filtered CSV reports (pendency, EVC, compliance, etc.) |
+| reports | `/api/reports` | Filtered CSV reports (pendency, EVC queue/visit delays and escalation levels, compliance, etc.) |
 | audit | `/api/audit-logs` | Audit history |
 | aicte-data | `/api/aicte-data` | Public institution cache, source health, sync |
 | assistant | `/api/assistant` | Optional OpenAI-compatible chat replies |
@@ -437,13 +449,13 @@ Security controls are included for this prototype, but they do **not** make it p
 - Passwords are stored as hashes; sessions use signed bearer tokens with a required environment-supplied JWT secret.
 - API endpoints enforce authentication, role checks and institution/region/application record scope; inactive users cannot authenticate.
 - Public registration is restricted to institution accounts and requires administrator activation before login.
-- Login (10/minute), registration (5/hour), password-reset requests (3/hour), password updates (5/hour) and assistant chat (10/minute) have per-IP application-level rate limits. Password recovery sends a single-use link that expires after 30 minutes; links are stored hashed and SMTP must be configured. Multi-worker or production deployments also need shared gateway-level limits.
+- Login (10/minute), registration (5/hour), password updates (5/hour) and assistant chat (10/minute) have per-IP application-level rate limits. Password-reset requests are limited to 3/hour per normalized email and source IP, with an additional 20/hour per-IP cap. Password recovery sends a single-use link that expires after 30 minutes; links are stored hashed and SMTP must be configured. Multi-worker or production deployments also need shared gateway-level limits.
 - A successful password reset invalidates existing bearer sessions for that account; sign in again using the new password.
 - Request bodies use validation schemas in the API. File uploads accept PDF/JPG/JPEG/PNG, enforce a 10 MB limit, and use authenticated, authorized download routes.
 - Security response headers include content-security policy, clickjacking and MIME-sniffing defenses, referrer and permissions policies; HSTS is sent over HTTPS.
 - CSV exports neutralize spreadsheet formula prefixes in data cells.
 - Workflow changes and administrative activity are recorded in the audit history. Automated indicators and OCR are advisory only; they do not determine document authenticity or official approval.
-- Email is optional. When SMTP is not configured, the application explicitly reports in-app-only delivery.
+- Email is optional. When SMTP is configured, new in-app alerts are also emailed to their recipients; otherwise delivery remains in-app only. SMS and live AICTE system integration are not connected in this prototype.
 - SQLite and local file storage are suitable for a local prototype. A real deployment needs an appropriately managed database, private object storage, TLS, backups, monitoring, shared rate limits and deployment-specific security review.
 - Set a unique secret in `backend/.env`; never commit credentials or local environment files. If a signing secret may have been exposed, revoke and rotate it.
 

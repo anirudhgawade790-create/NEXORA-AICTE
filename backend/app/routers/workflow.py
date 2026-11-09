@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, require_admin
 from app.models import User, WorkflowRules
 from app.services.audit import log_action
+from app.workflow_paths import WORKFLOW_PATHS, suggest_workflow_path
 
 router = APIRouter(prefix="/api/workflow", tags=["workflow"])
 
@@ -17,6 +18,40 @@ class RuleUpdate(BaseModel):
     deadline_days: int | None = None
     allowed_roles: str | None = None
     is_active: bool | None = None
+
+
+class WorkflowSuggestionRequest(BaseModel):
+    application_type: str = Field(min_length=2, max_length=100)
+
+
+@router.get("/paths")
+def list_paths(user: User = Depends(get_current_user)):
+    return [
+        {
+            "key": key,
+            "label": path["label"],
+            "description": path["description"],
+            "stages": list(path["stages"]),
+            "is_demo_example": True,
+        }
+        for key, path in WORKFLOW_PATHS.items()
+    ]
+
+
+@router.post("/suggest")
+def suggest_path(
+    payload: WorkflowSuggestionRequest,
+    user: User = Depends(get_current_user),
+):
+    path_key, reason = suggest_workflow_path(payload.application_type)
+    path = WORKFLOW_PATHS[path_key]
+    return {
+        "key": path_key,
+        "label": path["label"],
+        "description": path["description"],
+        "reason": reason,
+        "is_demo_suggestion": True,
+    }
 
 
 @router.get("/rules")

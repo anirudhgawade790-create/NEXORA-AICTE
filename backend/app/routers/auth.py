@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import Institution, PasswordResetToken, User
-from app.rate_limit import limiter
+from app.rate_limit import enforce_password_reset_email_limit, limiter
 from app.schemas.auth import (
     LoginRequest,
     PasswordResetConfirmRequest,
@@ -83,9 +83,11 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
 
 
 @router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
-@limiter.limit("3/hour")
+@limiter.limit("20/hour")
 def forgot_password(payload: PasswordResetRequest, request: Request, db: Session = Depends(get_db)):
     from app.config import settings
+
+    enforce_password_reset_email_limit(request, str(payload.email))
 
     if not settings.SMTP_HOST or not (settings.SMTP_FROM or settings.SMTP_USER):
         raise HTTPException(
