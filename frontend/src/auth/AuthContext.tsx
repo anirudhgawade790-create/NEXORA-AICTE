@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('nexora_token');
       localStorage.removeItem('nexora_user');
       setUser(null);
-      window.location.assign('/login');
+      window.location.assign('/');
   };
   const value = useMemo<AuthContextValue>(() => ({
     user, loading, login, register, logout,
